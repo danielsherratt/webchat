@@ -10,10 +10,13 @@ export async function onRequestPost({ request, env }) {
   }
   const hash = await bcrypt.hash(password, 10);
   const id = crypto.randomUUID();
-  await env.DB.prepare(\`
+  await env.DB.prepare(`
     INSERT INTO users (id, username, password_hash)
     VALUES (?, ?, ?)
-  \`).bind(id, username, hash).run();
+  `)
+  .bind(id, username, hash)
+  .run();
+
   return new Response(JSON.stringify({ success: true }), {
     headers: { 'Content-Type': 'application/json' }
   });
