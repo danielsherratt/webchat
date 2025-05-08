@@ -16,7 +16,7 @@ const channelButtons  = document.querySelectorAll('#channel-selector button');
 let currentChannel = 'everyone';
 let userRole       = null;
 
-// 1) Auth check function
+// Authenticate and initialize chat
 async function checkAuth() {
   const res = await fetch('/api/auth', { credentials: 'include' });
   if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
@@ -35,10 +35,10 @@ async function checkAuth() {
   }
 }
 
-// 2) Run on load
+// Run auth check on load
 checkAuth();
 
-// 3) Login form
+// Sign-in form
 loginForm.onsubmit = async e => {
   e.preventDefault();
   const res = await fetch('/api/login', {
@@ -60,7 +60,7 @@ logoutBtn.onclick = async () => {
   window.location.reload();
 };
 
-// Channel buttons
+// Channel selector
 channelButtons.forEach(btn => {
   btn.onclick = () => {
     channelButtons.forEach(b => b.classList.remove('active'));
@@ -70,7 +70,7 @@ channelButtons.forEach(btn => {
   };
 });
 
-// Enter/ Ctrl+Enter behavior
+// Enter=send, Ctrl+Enter=new line
 messageText.onkeydown = e => {
   if (e.key === 'Enter' && !e.ctrlKey) {
     e.preventDefault();
@@ -82,13 +82,11 @@ messageText.onkeydown = e => {
 
 sendBtn.onclick  = sendMessage;
 uploadBtn.onclick = () => fileInput.click();
-fileInput.onchange = uploadFile;
+fileInput.onchange  = uploadFile;
 
-// Load messages (separate pinned)
+// Load messages and separate pinned
 async function loadMessages() {
-  const res = await fetch(`/api/messages?channel=${currentChannel}`, {
-    credentials: 'include'
-  });
+  const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials: 'include' });
   if (!res.ok) return;
   const data = await res.json();
 
@@ -100,9 +98,8 @@ async function loadMessages() {
     div.className = 'message';
     div.innerHTML = `
       <span class="meta">[${new Date(msg.timestamp)
-        .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}]
-      ${msg.username}:</span> ${msg.content}
-    `;
+        .toLocaleString('en-NZ', {timeZone:'Pacific/Auckland'})}] 
+      ${msg.username}:</span> ${msg.content}`;
 
     if (userRole === 'admin') {
       const pinBtn = document.createElement('button');
@@ -123,7 +120,7 @@ async function loadMessages() {
   });
 }
 
-// Send message
+// Send a message
 async function sendMessage() {
   const content = messageText.value.trim();
   if (!content) return;
@@ -137,7 +134,7 @@ async function sendMessage() {
   loadMessages();
 }
 
-// Pin/unpin
+// Pin/unpin a message
 async function togglePin(id, pinned) {
   const res = await fetch('/api/messages/pin', {
     method: 'POST',
@@ -149,7 +146,7 @@ async function togglePin(id, pinned) {
   loadMessages();
 }
 
-// Delete message
+// Delete a message
 async function deleteMessage(id) {
   await fetch(`/api/messages?id=${id}`, {
     method: 'DELETE',
@@ -158,24 +155,20 @@ async function deleteMessage(id) {
   loadMessages();
 }
 
-// Load files
+// Load files from R2 bucket
 async function loadFiles() {
-  const res = await fetch('/api/files', { credentials: 'include' });
+  const res = await fetch('/api/upload', { credentials: 'include' });
   if (!res.ok) return;
-  const data = await res.json();
+  const files = await res.json();
   filesList.innerHTML = '';
-  data.forEach(f => {
+  files.forEach(f => {
     const li = document.createElement('li');
-    li.innerHTML = `
-      <a href="/api/files?id=${f.id}">${f.filename}</a>
-      [${new Date(f.timestamp)
-        .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}]
-    `;
+    li.innerHTML = `<a href="${f.url}" target="_blank">${f.filename}</a>`;
     filesList.appendChild(li);
   });
 }
 
-// Upload file
+// Upload a file to R2 and send chat link
 async function uploadFile() {
   const file = fileInput.files[0];
   if (!file) return;
@@ -186,6 +179,20 @@ async function uploadFile() {
     credentials: 'include',
     body: form
   });
-  if (!res.ok) return alert('Upload failed');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    return alert('Upload failed: ' + (err.error || res.status));
+  }
+  const { filename, url } = await res.json();
+
+  await fetch('/api/messages', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: `<a href="${url}" target="_blank">${filename}</a>`, channel: currentChannel })
+  });
+
+  fileInput.value = '';
   loadFiles();
+  loadMessages();
 }

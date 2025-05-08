@@ -1,58 +1,52 @@
 // File: cesw_hub/functions/api/upload.js
 
 export async function onRequestPost({ request, env }) {
-  // Authenticate & authorize
+  // — Authenticate & authorize —
   const cookie = request.headers.get('Cookie') || '';
-  const token = cookie.split('; ').find(c => c.startsWith('token='))?.split('=')[1];
+  const token  = cookie.split('; ').find(c => c.startsWith('token='))?.split('=')[1];
   const session = await env.D1_CESW
     .prepare('SELECT user_id FROM sessions WHERE token = ?')
     .bind(token)
     .first();
-  const user = session && await env.D1_CESW
+  if (!session) return new Response(null, { status: 401 });
+
+  const user = await env.D1_CESW
     .prepare('SELECT role FROM users WHERE id = ?')
     .bind(session.user_id)
     .first();
   if (!user || user.role !== 'admin') return new Response(null, { status: 403 });
 
-  // Handle upload
+  // — Handle file upload to R2 —
   const form = await request.formData();
   const file = form.get('file');
-  const data = await file.arrayBuffer();
-  await env.D1_CESW
-    .prepare('INSERT INTO files (filename, mime, data) VALUES (?, ?, ?)')
-    .bind(file.name, file.type, new Uint8Array(data))
-    .run();
+  if (!file) return new Response(JSON.stringify({ error: 'No file provided' }), {
+    status: 400,
+    headers: { 'Content-Type': 'application/json' }
+  });
 
-  return new Response(JSON.stringify({ message: 'File uploaded' }), {
+  const arrayBuffer = await file.arrayBuffer();
+  await env.CESW_Hub_Bucket.put(file.name, arrayBuffer, {
+    httpMetadata: { contentType: file.type }
+  });
+
+  // Construct the public URL
+  const url = `https://webchat.danieltesting.space/${encodeURIComponent(file.name)}`;
+
+  // Return the filename + URL
+  return new Response(JSON.stringify({ filename: file.name, url }), {
     status: 201,
     headers: { 'Content-Type': 'application/json' }
   });
 }
 
 export async function onRequestGet({ request, env }) {
-  const url = new URL(request.url);
-  const id = url.searchParams.get('id');
-
-  if (id) {
-    const res = await env.D1_CESW
-      .prepare('SELECT filename, mime, data FROM files WHERE id = ?')
-      .bind(id)
-      .first();
-    if (!res) return new Response(null, { status: 404 });
-    return new Response(res.data, {
-      status: 200,
-      headers: {
-        'Content-Type': res.mime,
-        'Content-Disposition': `attachment; filename="${res.filename}"`
-      }
-    });
-  }
-
-  // List all files
-  const all = await env.D1_CESW
-    .prepare('SELECT id, filename, timestamp FROM files ORDER BY timestamp DESC')
-    .all();
-  return new Response(JSON.stringify(all.results), {
+  // List all objects in the bucket
+  const { objects } = await env.CESW_Hub_Bucket.list();
+  const files = objects.map(o => ({
+    filename: o.key,
+    url: `https://webchat.danieltesting.space/${encodeURIComponent(o.key)}`
+  }));
+  return new Response(JSON.stringify(files), {
     status: 200,
     headers: { 'Content-Type': 'application/json' }
   });
