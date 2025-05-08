@@ -10,7 +10,7 @@ const newRoleSelect     = document.getElementById('new-role');
 const createUserBtn     = document.getElementById('create-user-btn');
 const tbody             = document.querySelector('#users-table tbody');
 
-// Kick non-admins back
+// Initialization: only admins allowed
 async function init() {
   const auth = await fetch('/api/auth', { credentials:'include' });
   if (auth.status !== 200) return window.location = '/';
@@ -66,23 +66,22 @@ async function loadUsers() {
 
   users.forEach(u => {
     const tr = document.createElement('tr');
-    // ID + Username
     tr.innerHTML = `
       <td style="padding:0.5rem; border-bottom:1px solid #eee;">${u.id}</td>
       <td style="padding:0.5rem; border-bottom:1px solid #eee;">${u.username}</td>
-      ${roleCellHTML(u)}
+      ${roleCell(u)}
       <td style="padding:0.5rem; border-bottom:1px solid #eee;">
         <button class="edit-btn" data-username="${u.username}" data-id="${u.id}" style="background:none;border:none;cursor:pointer;">
           <i class="fas fa-edit"></i>
         </button>
-        <button class="delete-btn" data-id="${u.id}" style="background:none;border:none;cursor:pointer;">
+        <button class="delete-btn" data-id="${u.id}" style="background:none;border:none;cursor:pointer;color:#c00;">
           <i class="fas fa-trash"></i>
         </button>
       </td>`;
     tbody.appendChild(tr);
   });
 
-  // Attach all dynamic handlers
+  // Attach handlers
   tbody.querySelectorAll('.role-select').forEach(sel => {
     sel.onchange = async () => {
       const id = Number(sel.dataset.id);
@@ -96,12 +95,11 @@ async function loadUsers() {
       else loadUsers();
     };
   });
-
   tbody.querySelectorAll('.edit-btn').forEach(btn => {
     btn.onclick = async () => {
-      const id = Number(btn.dataset.id);
+      const id   = Number(btn.dataset.id);
       const name = btn.dataset.username;
-      const pw = prompt(`Enter a new password for ${name}:`);
+      const pw   = prompt(`Enter new password for ${name}:`);
       if (!pw) return;
       const r = await fetch('/api/users', {
         method:'PUT',credentials:'include',
@@ -112,7 +110,6 @@ async function loadUsers() {
       else loadUsers();
     };
   });
-
   tbody.querySelectorAll('.delete-btn').forEach(btn => {
     btn.onclick = async () => {
       const id = Number(btn.dataset.id);
@@ -126,14 +123,14 @@ async function loadUsers() {
   });
 }
 
-function roleCellHTML(u) {
+function roleCell(u) {
   if (u.role === 'admin') {
     return `<td style="padding:0.5rem; border-bottom:1px solid #eee;">Admin</td>`;
   } else {
     return `<td style="padding:0.5rem; border-bottom:1px solid #eee;">
       <select class="role-select" data-id="${u.id}" style="padding:0.25rem; border:1px solid #ccc; border-radius:4px;">
         <option value="member"${u.role==='member'?' selected':''}>Member</option>
-        <option value="owner"${u.role==='owner'?' selected':''}>Owner</option>
+        <option value="admin"${u.role==='admin'?' selected':''}>Admin</option>
       </select>
     </td>`;
   }
