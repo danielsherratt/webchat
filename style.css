@@ -50,10 +50,7 @@ body {
   justify-content: center;
   margin-bottom: 1rem;
 }
-#logo img {
-  width: 32px;
-  height: 32px;
-}
+#logo img { width: 32px; height: 32px; }
 .logo-text {
   margin-left: 0.5rem;
   font-size: 1.25rem;
@@ -75,12 +72,8 @@ body {
   border-radius: 4px;
   margin-bottom: 0.25rem;
 }
-#channel-list li.active {
-  background: #003541;
-}
-#channel-list li.bold {
-  font-weight: bold;
-}
+#channel-list li.active { background: #003541; }
+#channel-list li.bold { font-weight: bold; }
 
 /* Main chat area */
 #chat-main {
@@ -96,9 +89,7 @@ body {
   justify-content: space-between;
   align-items: center;
 }
-#chat-header h2 {
-  font-size: 1.2rem;
-}
+#chat-header h2 { font-size: 1.2rem; }
 #chat-header button {
   background: #f44336;
   padding: 0.4rem 0.8rem;
@@ -108,15 +99,16 @@ body {
   cursor: pointer;
 }
 
-/* Sections scrollable and sticky headings */
+/* These containers scroll */
 #pinned-section,
 #messages-section,
 #shared-files {
   padding: 0.5rem 1rem;
   overflow-y: auto;
   position: relative;
-  scroll-behavior: smooth;
 }
+
+/* Stick headings */
 #pinned-section h3,
 #messages-section h3,
 #shared-files h3 {
@@ -129,7 +121,7 @@ body {
   border-bottom: 1px solid #e0e0e0;
 }
 
-/* Pinned messages */
+/* Pinned */
 #pinned-messages .message {
   background: #fffbea;
   border-left: 4px solid #00625f;
@@ -149,8 +141,7 @@ body {
   font-size: 0.8rem;
   color: #666;
 }
-.pin-btn,
-.delete-btn {
+.pin-btn, .delete-btn {
   background: none;
   border: none;
   cursor: pointer;
@@ -164,25 +155,20 @@ body {
   margin-bottom: 0.5rem;
 }
 .file-thumb {
-  width: 32px;
-  height: 32px;
+  width: 32px; height: 32px;
   object-fit: cover;
   border-radius: 4px;
   margin-right: 0.5rem;
-  flex-shrink: 0;
 }
 .file-icon {
   font-size: 1.5rem;
   color: #00625f;
   margin-right: 0.5rem;
-  width: 32px;
-  height: 32px;
+  width: 32px; height: 32px;
   text-align: center;
   line-height: 32px;
 }
-.file-name {
-  flex: 1;
-}
+.file-name { flex: 1; }
 .file-delete {
   background: none;
   border: none;
@@ -191,7 +177,7 @@ body {
   cursor: pointer;
 }
 
-/* Message input */
+/* Input */
 #message-input {
   display: flex;
   padding: 0.5rem 1rem;
