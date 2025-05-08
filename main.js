@@ -1,4 +1,4 @@
-// File: cesw_hub/main.js
+// cesw_hub/main.js
 
 // Elements
 const loginContainer  = document.getElementById('login-container');
@@ -17,7 +17,7 @@ const channelButtons  = document.querySelectorAll('#channel-selector button');
 let currentChannel = 'everyone';
 let userRole       = null;
 
-// Function: show login or chat
+// Helpers to toggle views
 function showLogin() {
   loginContainer.style.display = 'block';
   chatContainer.style.display  = 'none';
@@ -27,7 +27,7 @@ function showChat() {
   chatContainer.style.display  = 'block';
 }
 
-// Auth check
+// 1) Check auth state
 async function checkAuth() {
   try {
     const res = await fetch('/api/auth', { credentials: 'include' });
@@ -45,7 +45,7 @@ async function checkAuth() {
   showLogin();
 }
 
-// Initialize chat polling and loads
+// 2) Start polling & loads
 let messageInterval;
 function startChat() {
   loadMessages();
@@ -54,7 +54,7 @@ function startChat() {
   messageInterval = setInterval(loadMessages, 1000);
 }
 
-// Login form
+// 3) Wire up login form
 loginForm.onsubmit = async e => {
   e.preventDefault();
   try {
@@ -79,7 +79,10 @@ loginForm.onsubmit = async e => {
 
 // Logout
 logoutBtn.onclick = async () => {
-  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  await fetch('/api/logout', {
+    method: 'POST',
+    credentials: 'include'
+  });
   showLogin();
   if (messageInterval) clearInterval(messageInterval);
 };
@@ -94,7 +97,7 @@ channelButtons.forEach(btn => {
   };
 });
 
-// Enter/ Ctrl+Enter behavior
+// Enter=send, Ctrl+Enter=new line
 messageText.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.ctrlKey) {
     e.preventDefault();
@@ -103,14 +106,16 @@ messageText.addEventListener('keydown', e => {
     messageText.value += '\n';
   }
 });
-sendBtn.onclick = sendMessage;
+sendBtn.onclick   = sendMessage;
 uploadBtn.onclick = () => fileInput.click();
 fileInput.onchange = uploadFile;
 
-// Load messages
+// Load messages, reverse order, separate pinned
 async function loadMessages() {
   try {
-    const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials: 'include' });
+    const res = await fetch(`/api/messages?channel=${currentChannel}`, {
+      credentials: 'include'
+    });
     if (!res.ok) return;
     const data = await res.json();
     data.reverse();
@@ -122,28 +127,32 @@ async function loadMessages() {
       const div = document.createElement('div');
       div.className = 'message';
       div.innerHTML = `<span class="meta">[${new Date(msg.timestamp)
-        .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}] ${msg.username}:</span> ${msg.content}`;
+        .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}] 
+        ${msg.username}:</span> ${msg.content}`;
+
       if (userRole === 'admin') {
         const pinBtn = document.createElement('button');
         pinBtn.className = 'pin-btn';
         pinBtn.textContent = msg.pinned ? 'Unpin' : 'Pin';
         pinBtn.onclick = () => togglePin(msg.id, !msg.pinned);
         div.appendChild(pinBtn);
+
         const delBtn = document.createElement('button');
         delBtn.className = 'delete-btn';
         delBtn.textContent = 'Delete';
         delBtn.onclick = () => deleteMessage(msg.id);
         div.appendChild(delBtn);
       }
+
       if (msg.pinned) pinnedContainer.appendChild(div);
-      else messagesDiv.appendChild(div);
+      else             messagesDiv.appendChild(div);
     });
   } catch (e) {
     console.error('loadMessages error', e);
   }
 }
 
-// Send message
+// Send a chat message
 async function sendMessage() {
   const content = messageText.value.trim();
   if (!content) return;
@@ -157,7 +166,7 @@ async function sendMessage() {
   loadMessages();
 }
 
-// Pin/unpin
+// Pin or unpin a message
 async function togglePin(id, pinned) {
   const res = await fetch('/api/messages/pin', {
     method: 'POST',
@@ -169,22 +178,28 @@ async function togglePin(id, pinned) {
   loadMessages();
 }
 
-// Delete message
+// Delete a message
 async function deleteMessage(id) {
-  await fetch(`/api/messages?id=${id}`, { method: 'DELETE', credentials: 'include' });
+  await fetch(`/api/messages?id=${id}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  });
   loadMessages();
 }
 
-// Load files
+// Load shared files from R2
 async function loadFiles() {
   try {
     const res = await fetch('/api/upload', { credentials: 'include' });
     if (!res.ok) return;
     const files = await res.json();
     filesList.innerHTML = '';
+
     files.forEach(f => {
       const li = document.createElement('li');
       li.className = 'file-item';
+
+      // Thumbnail or icon
       const ext = f.filename.split('.').pop().toLowerCase();
       let thumb;
       if (['png','jpg','jpeg','gif','webp'].includes(ext)) {
@@ -193,23 +208,40 @@ async function loadFiles() {
         thumb.className = 'file-thumb';
       } else {
         thumb = document.createElement('i');
-        const iconMap = { pdf:'fa-file-pdf', doc:'fa-file-word', docx:'fa-file-word', xls:'fa-file-excel', xlsx:'fa-file-excel', ppt:'fa-file-powerpoint', pptx:'fa-file-powerpoint' };
+        const iconMap = {
+          pdf: 'fa-file-pdf',
+          doc: 'fa-file-word',
+          docx: 'fa-file-word',
+          xls: 'fa-file-excel',
+          xlsx: 'fa-file-excel',
+          ppt: 'fa-file-powerpoint',
+          pptx: 'fa-file-powerpoint'
+        };
         thumb.className = `file-icon fas ${iconMap[ext] || 'fa-file'}`;
       }
       li.appendChild(thumb);
+
+      // Filename link
       const nameSpan = document.createElement('span');
       nameSpan.className = 'file-name';
       nameSpan.innerHTML = `<a href="${f.url}" target="_blank">${f.filename}</a>`;
       li.appendChild(nameSpan);
+
+      // Delete button
       const delBtn = document.createElement('button');
       delBtn.className = 'file-delete';
       delBtn.textContent = '×';
       delBtn.onclick = async () => {
         if (!confirm(`Delete ${f.filename}?`)) return;
-        const dres = await fetch(`/api/upload?key=${encodeURIComponent(f.key)}`, { method: 'DELETE', credentials: 'include' });
+        const dres = await fetch(`/api/upload?key=${encodeURIComponent(f.key)}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
         if (dres.ok) loadFiles();
+        else alert('Delete failed');
       };
       li.appendChild(delBtn);
+
       filesList.appendChild(li);
     });
   } catch (e) {
@@ -217,7 +249,7 @@ async function loadFiles() {
   }
 }
 
-// Upload file
+// Upload to R2 and post link in chat
 async function uploadFile() {
   const file = fileInput.files[0];
   if (!file) return alert('No file selected');
@@ -225,17 +257,25 @@ async function uploadFile() {
   form.append('file', file);
 
   try {
-    const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: form });
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: form
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       return alert('Upload failed: ' + (err.error || res.status));
     }
     const { filename, url } = await res.json();
+    // Auto‐post chat link
     await fetch('/api/messages', {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify({ content: `<a href="${url}" target="_blank">${filename}</a>`, channel: currentChannel })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: `<a href="${url}" target="_blank">${filename}</a>`,
+        channel: currentChannel
+      })
     });
     fileInput.value = '';
     loadFiles();
@@ -245,3 +285,6 @@ async function uploadFile() {
     alert('Upload error');
   }
 }
+
+// Kick off auth on page load
+checkAuth();

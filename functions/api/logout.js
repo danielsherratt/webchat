@@ -1,10 +1,8 @@
-// ──────────────────────────────────────────────────────────────────────────────
-// File: cesw_hub/functions/api/logout.js
-// ──────────────────────────────────────────────────────────────────────────────
+// cesw_hub/functions/api/logout.js
 
 export async function onRequestPost({ request, env }) {
   const cookie = request.headers.get('Cookie') || '';
-  const token = cookie.split('; ').find(c => c.startsWith('token='))?.split('=')[1];
+  const token  = cookie.split('; ').find(c => c.startsWith('token='))?.split('=')[1];
   if (token) {
     await env.D1_CESW
       .prepare('DELETE FROM sessions WHERE token = ?')
@@ -17,6 +15,7 @@ export async function onRequestPost({ request, env }) {
     'Set-Cookie',
     [
       'token=',
+      'Domain=webchat.danieltesting.space',
       'Path=/',
       'HttpOnly',
       'Secure',
@@ -24,5 +23,6 @@ export async function onRequestPost({ request, env }) {
       'Max-Age=0'
     ].join('; ')
   );
+
   return new Response(null, { status: 204, headers });
 }

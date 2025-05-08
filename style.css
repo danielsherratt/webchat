@@ -1,4 +1,4 @@
-/* File: cesw_hub/style.css */
+/* cesw_hub/style.css */
 @import url('https://fonts.googleapis.com/css2?family=Work+Sans&display=swap');
 
 body {
@@ -8,7 +8,6 @@ body {
   padding: 0;
 }
 
-/* Widen the containers */
 #login-container,
 #chat-container {
   max-width: 800px;
@@ -48,9 +47,6 @@ button:hover {
   color: #fff;
 }
 
-#pinned-section {
-  margin-bottom: 1rem;
-}
 #pinned-section h3,
 #messages-section h3,
 #shared-files h3 {
@@ -93,8 +89,38 @@ button:hover {
   list-style: none;
   padding: 0;
 }
-#shared-files li {
+
+/* File‐item thumbnail/icon styles */
+.file-item {
+  display: flex;
+  align-items: center;
   margin: 0.5rem 0;
+}
+.file-thumb {
+  width: 32px; height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+.file-icon {
+  font-size: 1.5rem;
+  color: #00625f;
+  margin-right: 0.5rem;
+  width: 32px; height: 32px;
+  text-align: center;
+  line-height: 32px;
+}
+.file-name {
+  flex: 1;
+}
+.file-delete {
+  background: none;
+  border: none;
+  color: #c00;
+  font-size: 1.2rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
 }
 
 #message-input {
@@ -109,43 +135,5 @@ button:hover {
   border-radius: 4px;
 }
 #message-input #send-btn {
-  margin-left: 0.5rem;
-}
-
-
-#shared-files ul {
-  list-style: none;
-  padding: 0;
-}
-
-.file-item {
-  display: flex;
-  align-items: center;
-  margin: 0.5rem 0;
-}
-.file-thumb,
-.file-icon {
-  width: 32px;
-  height: 32px;
-  margin-right: 0.5rem;
-  flex-shrink: 0;
-}
-.file-thumb {
-  object-fit: cover;
-  border-radius: 4px;
-}
-.file-icon {
-  font-size: 1.5rem;
-  color: #00625f;
-}
-.file-name {
-  flex: 1;
-}
-.file-delete {
-  background: none;
-  border: none;
-  color: #c00;
-  font-size: 1.2rem;
-  cursor: pointer;
   margin-left: 0.5rem;
 }

@@ -1,6 +1,4 @@
-// ──────────────────────────────────────────────────────────────────────────────
-// File: cesw_hub/functions/api/login.js
-// ──────────────────────────────────────────────────────────────────────────────
+// cesw_hub/functions/api/login.js
 
 export async function onRequestPost({ request, env }) {
   const { username, password } = await request.json();
@@ -12,7 +10,7 @@ export async function onRequestPost({ request, env }) {
   if (!user || user.password !== password) {
     return new Response(
       JSON.stringify({ error: 'Invalid credentials' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' }}
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
@@ -27,12 +25,14 @@ export async function onRequestPost({ request, env }) {
     'Set-Cookie',
     [
       `token=${token}`,
+      'Domain=webchat.danieltesting.space',
       'Path=/',
       'HttpOnly',
       'Secure',
       'SameSite=None'
     ].join('; ')
   );
+
   return new Response(
     JSON.stringify({ message: 'Logged in', role: user.role }),
     { status: 200, headers }
