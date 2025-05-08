@@ -1,11 +1,11 @@
 export async function onRequestGet({ env }) {
-  const { results } = await env.DB.prepare(`
+  const { results } = await env.DB.prepare(\`
     SELECT m.id, u.username, m.content, m.file_key, m.created_at
     FROM messages m
     JOIN users u ON u.id = m.user_id
     ORDER BY m.created_at DESC
     LIMIT 100
-  `).all();
+  \`).all();
 
   const msgs = await Promise.all(results.map(async m => ({
     id: m.id,
@@ -17,5 +17,7 @@ export async function onRequestGet({ env }) {
     created_at: m.created_at
   })));
 
-  return new Response(JSON.stringify(msgs), { headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify(msgs), {
+    status: 200, headers: { 'Content-Type': 'application/json' }
+  });
 }

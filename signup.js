@@ -1,4 +1,3 @@
-// unchanged - form posts to /api/signup
 document.getElementById('signupForm').onsubmit = async e => {
   e.preventDefault();
   const form = e.target;

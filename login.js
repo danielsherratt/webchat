@@ -12,7 +12,6 @@ document.getElementById('loginForm').onsubmit = async e => {
   });
   const j = await res.json();
   if (j.success) {
-    // session cookie set; redirect
     location.href = 'index.html';
   } else {
     alert(j.error || 'Login failed');
