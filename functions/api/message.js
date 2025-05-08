@@ -1,7 +1,7 @@
+// Authenticate via session cookie and insert message
 export async function onRequestPost({ request, env }) {
-  // read session cookie
-  const cookie = request.headers.get('Cookie') || '';
-  const match = cookie.match(/(?:^|; )session=([^;]+)/);
+  const cookieHeader = request.headers.get('Cookie') || '';
+  const match = cookieHeader.match(/(?:^|; )session=([^;]+)/);
   if (!match) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
@@ -10,13 +10,9 @@ export async function onRequestPost({ request, env }) {
   }
   const token = match[1];
 
-  // validate session
-  const { results } = await env.DB.prepare(`
-    SELECT user_id FROM sessions
-    WHERE token = ? AND expire_at > datetime('now')
-  `)
-  .bind(token)
-  .all();
+  const { results } = await env.DB.prepare(
+    `SELECT user_id FROM sessions WHERE token = ? AND expire_at > datetime('now')`
+  ).bind(token).all();
   if (!results.length) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
@@ -25,7 +21,7 @@ export async function onRequestPost({ request, env }) {
   }
   const userId = results[0].user_id;
 
-  // handle form & file upload
+  // Handle message content and optional file
   const form = await request.formData();
   const content = form.get('content') || '';
   let fileKey = null;
@@ -35,10 +31,10 @@ export async function onRequestPost({ request, env }) {
     await env.FILES.put(fileKey, file.stream());
   }
 
-  await env.DB.prepare(`
-    INSERT INTO messages (id, user_id, content, file_key)
-    VALUES (?, ?, ?, ?)
-  `)
+  await env.DB.prepare(
+    `INSERT INTO messages (id, user_id, content, file_key)
+     VALUES (?, ?, ?, ?)`
+  )
   .bind(crypto.randomUUID(), userId, content, fileKey)
   .run();
 
