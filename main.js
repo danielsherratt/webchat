@@ -80,15 +80,17 @@ messageText.onkeydown = e => {
   }
 };
 
-sendBtn.onclick  = sendMessage;
+sendBtn.onclick   = sendMessage;
 uploadBtn.onclick = () => fileInput.click();
-fileInput.onchange  = uploadFile;
+fileInput.onchange = uploadFile;
 
-// Load messages and separate pinned
+// Load messages and separate pinned (newest first)
 async function loadMessages() {
   const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials: 'include' });
   if (!res.ok) return;
   const data = await res.json();
+  // show newest on top
+  data.reverse();
 
   pinnedContainer.innerHTML = '';
   messagesDiv.innerHTML     = '';
@@ -98,7 +100,7 @@ async function loadMessages() {
     div.className = 'message';
     div.innerHTML = `
       <span class="meta">[${new Date(msg.timestamp)
-        .toLocaleString('en-NZ', {timeZone:'Pacific/Auckland'})}] 
+        .toLocaleString('en-NZ', { timeZone: 'Pacific/Auckland' }) }]
       ${msg.username}:</span> ${msg.content}`;
 
     if (userRole === 'admin') {
@@ -142,7 +144,7 @@ async function togglePin(id, pinned) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, pinned })
   });
-  if (!res.ok) alert('Pin failed');
+  if (!res.ok) alert('Pin failed: ' + res.status);
   loadMessages();
 }
 
@@ -174,17 +176,19 @@ async function uploadFile() {
   if (!file) return;
   const form = new FormData();
   form.append('file', file);
+
   const res = await fetch('/api/upload', {
     method: 'POST',
     credentials: 'include',
     body: form
   });
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     return alert('Upload failed: ' + (err.error || res.status));
   }
-  const { filename, url } = await res.json();
 
+  const { filename, url } = await res.json();
   await fetch('/api/messages', {
     method: 'POST',
     credentials: 'include',
