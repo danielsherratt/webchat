@@ -105,6 +105,7 @@ async function checkAuth() {
     const res = await fetch('/api/auth', { credentials: 'include' });
     if (res.status === 200) {
       const data = await res.json();
+      document.getElementById('current-user').textContent = data.username;
       userRole = data.role;
       userId   = data.id;
       showChat();
