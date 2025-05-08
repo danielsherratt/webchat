@@ -5,19 +5,21 @@
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
-
   <title>CESW Hub</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans&display=swap" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-pb3R5N8j+vGv2Om+Sg6L/JWQ1CLxOrvDwOxg4bO6XsfZQnF8vtr+r1z3L07W/a/r0TcuB/9B+KXj3tDkXNTaTA=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
   <link rel="stylesheet" href="/style.css" />
   <script defer src="/main.js"></script>
 </head>
 <body>
   <div id="login-container">
-    <div id="logo">
-      <img src="/wlogo.png" alt="CESW Hub Logo" />
-      <span class="logo-text">CESW Hub</span>
-    </div>
+    <h1>CESW Hub</h1>
     <form id="login-form">
       <input type="text" id="username" placeholder="Username" required />
       <input type="password" id="password" placeholder="Password" required />
@@ -32,7 +34,8 @@
         <img src="/logo.png" alt="CESW Hub Logo" />
         <span class="logo-text">CESW Hub</span>
       </div>
-      <div id="user-info">Logged in as: <span id="current-user"></span></div>
+      <!-- Greeting will be injected here -->
+      <div id="user-info"></div>
       <ul id="channel-list"></ul>
     </aside>
 
@@ -41,18 +44,22 @@
         <h2 id="chat-title">Everyone</h2>
         <button id="logout-btn">Logout</button>
       </header>
+
       <div id="pinned-section">
         <h3>Pinned</h3>
         <div id="pinned-messages"></div>
       </div>
+
       <div id="messages-section">
         <h3>Messages</h3>
         <div id="messages"></div>
       </div>
+
       <div id="shared-files">
         <h3>Shared Files</h3>
         <ul id="files-list"></ul>
       </div>
+
       <div id="message-input">
         <textarea id="message-text" rows="2" placeholder="Type a message…"></textarea>
         <button id="send-btn">Send</button>
