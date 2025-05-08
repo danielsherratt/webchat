@@ -52,8 +52,8 @@ button:hover {
   color: #666;
 }
 .pin-btn, .delete-btn {
-  background: none;
-  border: none;
+  background: #00625f;
+  border: #00625f;
   cursor: pointer;
   margin-left: 0.5rem;
 }
