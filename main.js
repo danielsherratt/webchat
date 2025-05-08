@@ -1,3 +1,5 @@
+// cesw_hub/main.js
+
 const loginContainer = document.getElementById('login-container');
 const chatContainer = document.getElementById('chat-container');
 const loginForm = document.getElementById('login-form');
@@ -17,6 +19,7 @@ loginForm.onsubmit = async e => {
   e.preventDefault();
   const res = await fetch('/api/login', {
     method: 'POST',
+    credentials: 'include',            // ← include cookies
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       username: document.getElementById('username').value,
@@ -33,7 +36,7 @@ loginForm.onsubmit = async e => {
 };
 
 logoutBtn.onclick = async () => {
-  await fetch('/api/logout', { method: 'POST' });
+  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
   location.reload();
 };
 
@@ -60,7 +63,8 @@ uploadBtn.onclick = () => fileInput.click();
 fileInput.onchange = uploadFile;
 
 async function initChat() {
-  const userRes = await fetch('/api/auth');
+  const userRes = await fetch('/api/auth', { credentials: 'include' });
+  if (!userRes.ok) return location.reload();
   const userData = await userRes.json();
   userRole = userData.role;
   if (userRole === 'admin') {
@@ -72,13 +76,19 @@ async function initChat() {
 }
 
 async function loadMessages() {
-  const res = await fetch(`/api/messages?channel=${currentChannel}`);
+  const res = await fetch(`/api/messages?channel=${currentChannel}`, {
+    credentials: 'include'
+  });
+  if (!res.ok) return;
   const data = await res.json();
   messagesDiv.innerHTML = '';
   data.forEach(msg => {
     const div = document.createElement('div');
     div.className = 'message';
-    div.innerHTML = `<span class="meta">[${new Date(msg.timestamp).toLocaleString('en-NZ', {timeZone: 'Pacific/Auckland'})}] ${msg.username}:</span> <span>${msg.content}</span>`;
+    div.innerHTML = `
+      <span class="meta">[${new Date(msg.timestamp)
+        .toLocaleString('en-NZ', { timeZone: 'Pacific/Auckland' })}] 
+      ${msg.username}:</span> <span>${msg.content}</span>`;
     if (userRole === 'admin') {
       const pinBtn = document.createElement('button');
       pinBtn.className = 'pin-btn';
@@ -100,6 +110,7 @@ async function sendMessage() {
   if (!content) return;
   await fetch('/api/messages', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content, channel: currentChannel })
   });
@@ -110,22 +121,32 @@ async function sendMessage() {
 async function togglePin(id, pinned) {
   await fetch('/api/messages/pin', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, pinned })
   });
+  loadMessages();
 }
 
 async function deleteMessage(id) {
-  await fetch(`/api/messages?id=${id}`, { method: 'DELETE' });
+  await fetch(`/api/messages?id=${id}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  });
+  loadMessages();
 }
 
 async function loadFiles() {
-  const res = await fetch('/api/files');
+  const res = await fetch('/api/files', { credentials: 'include' });
+  if (!res.ok) return;
   const data = await res.json();
   filesList.innerHTML = '';
   data.forEach(f => {
     const li = document.createElement('li');
-    li.innerHTML = `<a href="/api/files?id=${f.id}">${f.filename}</a> [${new Date(f.timestamp).toLocaleString('en-NZ', {timeZone: 'Pacific/Auckland'})}]`;
+    li.innerHTML = `
+      <a href="/api/files?id=${f.id}">${f.filename}</a> 
+      [${new Date(f.timestamp)
+        .toLocaleString('en-NZ', { timeZone: 'Pacific/Auckland' })}]`;
     filesList.appendChild(li);
   });
 }
@@ -133,6 +154,10 @@ async function loadFiles() {
 async function uploadFile() {
   const form = new FormData();
   form.append('file', fileInput.files[0]);
-  await fetch('/api/upload', { method: 'POST', body: form });
+  await fetch('/api/upload', {
+    method: 'POST',
+    credentials: 'include',            // ← include cookies so auth works
+    body: form
+  });
   loadFiles();
 }
