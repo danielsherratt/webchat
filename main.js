@@ -1,5 +1,8 @@
 // cesw_hub/main.js
 
+// Detect or fall back to NZ timezone
+const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Pacific/Auckland';
+
 // Elements
 const loginContainer   = document.getElementById('login-container');
 const chatContainer    = document.getElementById('chat-container');
@@ -22,26 +25,31 @@ let userRole, userId;
 let currentChannel = 'everyone';
 let messageInterval;
 
-// Track whether we've auto-scrolled each channel
-const initialScrolled = {};
+// Track first‐load auto-scroll per channel
+const initialScrolledMsgs  = {};
+const initialScrolledFiles = {};
 
-// Helpers to show/hide views
-function showLogin() {
+// Show/hide views
+const showLogin = () => {
   loginContainer.style.display = 'block';
   chatContainer.style.display  = 'none';
-}
-function showChat() {
+};
+const showChat  = () => {
   loginContainer.style.display = 'none';
   chatContainer.style.display  = 'flex';
-}
+};
 
-// Greeting
+// Greeting helper
 function getGreeting() {
   const h = new Date().getHours();
-  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  return h < 12
+    ? 'Good morning'
+    : h < 18
+      ? 'Good afternoon'
+      : 'Good evening';
 }
 
-// 1) Check auth state
+// 1) Auth check & init
 async function checkAuth() {
   try {
     const res = await fetch('/api/auth', { credentials: 'include' });
@@ -62,11 +70,11 @@ async function checkAuth() {
   showLogin();
 }
 
-// 2) Build sidebar channel list
+// 2) Build sidebar
 async function loadChannels() {
   const channels = [];
-  // Everyone channel
-  let msgs = await fetch(`/api/messages?channel=everyone`, { credentials: 'include' }).then(r => r.json());
+  // Everyone
+  let msgs = await fetch(`/api/messages?channel=everyone`, { credentials:'include' }).then(r=>r.json());
   let last = msgs[msgs.length - 1];
   channels.push({
     key: 'everyone',
@@ -75,64 +83,62 @@ async function loadChannels() {
     author: last?.authorRole || null
   });
 
-  // Private channels
+  // Private
   if (userRole === 'member') {
     const key = `private-${userId}`;
-    msgs = await fetch(`/api/messages?channel=${key}`, { credentials: 'include' }).then(r => r.json());
+    msgs = await fetch(`/api/messages?channel=${key}`, { credentials:'include' }).then(r=>r.json());
     last = msgs[msgs.length - 1];
     channels.push({
-      key,
-      label: 'Admin',
+      key, label: 'Admin',
       ts: last?.timestamp || 0,
       author: last?.authorRole || null
     });
   } else {
-    const users = await fetch('/api/users', { credentials: 'include' }).then(r => r.json());
-    for (const u of users.filter(u => u.role === 'member')) {
+    const users = await fetch('/api/users', { credentials:'include' }).then(r=>r.json());
+    for (const u of users.filter(u=>u.role==='member')) {
       const key = `private-${u.id}`;
-      msgs = await fetch(`/api/messages?channel=${key}`, { credentials: 'include' }).then(r => r.json());
+      msgs = await fetch(`/api/messages?channel=${key}`, { credentials:'include' }).then(r=>r.json());
       last = msgs[msgs.length - 1];
       channels.push({
-        key,
-        label: u.username,
+        key, label: u.username,
         ts: last?.timestamp || 0,
         author: last?.authorRole || null
       });
     }
   }
 
-  // Sort by timestamp (newest first), keep Everyone at top
+  // Sort by newest, keep Everyone on top
   const [everyone, ...rest] = channels;
-  rest.sort((a, b) => b.ts - a.ts);
+  rest.sort((a,b) => b.ts - a.ts);
   const sorted = [everyone, ...rest];
 
-  // Render list
   channelList.innerHTML = '';
   for (const ch of sorted) {
     const li = document.createElement('li');
-    li.textContent    = ch.label + (userRole === 'admin' && ch.author === 'member' ? ' *' : '');
+    li.textContent    = ch.label + (userRole==='admin' && ch.author==='member' ? ' *' : '');
     li.dataset.channel = ch.key;
     if (ch.key === currentChannel) li.classList.add('active');
-    if (userRole === 'admin' && ch.author === 'member') li.classList.add('bold');
+    if (userRole==='admin' && ch.author==='member') li.classList.add('bold');
     li.onclick = () => selectChannel(ch.key, ch.label);
     channelList.appendChild(li);
   }
 }
 
-// Switch channel
+// Switch channels
 function selectChannel(key, label) {
   currentChannel = key;
   chatTitle.textContent = label;
-  document.querySelectorAll('#channel-list li').forEach(li => {
-    li.classList.toggle('active', li.dataset.channel === key);
-  });
-  // Reset auto-scroll flag for this channel
-  initialScrolled[key] = false;
+  document.querySelectorAll('#channel-list li').forEach(li =>
+    li.classList.toggle('active', li.dataset.channel === key)
+  );
+  // reset auto-scroll for this channel
+  initialScrolledMsgs[key]  = false;
+  initialScrolledFiles[key] = false;
   loadMessages();
   loadFiles();
 }
 
-// 3) Poll for updates
+// 3) Poll loop
 function startPolling() {
   loadMessages();
   loadFiles();
@@ -144,7 +150,7 @@ function startPolling() {
   }, 1000);
 }
 
-// 4) Handle login form submission
+// 4) Login handler
 loginForm.onsubmit = async e => {
   e.preventDefault();
   const res = await fetch('/api/login', {
@@ -162,16 +168,15 @@ loginForm.onsubmit = async e => {
 
 // Logout
 logoutBtn.onclick = async () => {
-  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  await fetch('/api/logout', { method:'POST', credentials:'include' });
   clearInterval(messageInterval);
   showLogin();
 };
 
-// Message input: Enter to send, Ctrl+Enter newline
+// Input shortcuts
 messageText.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.ctrlKey) {
-    e.preventDefault();
-    sendMessage();
+    e.preventDefault(); sendMessage();
   } else if (e.key === 'Enter' && e.ctrlKey) {
     messageText.value += '\n';
   }
@@ -180,9 +185,9 @@ sendBtn.onclick   = sendMessage;
 uploadBtn.onclick = () => fileInput.click();
 fileInput.onchange = uploadFile;
 
-// Load and display messages
+// Load messages with one-time auto-scroll
 async function loadMessages() {
-  const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials: 'include' });
+  const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials:'include' });
   if (!res.ok) return;
   const data = await res.json();
 
@@ -190,12 +195,13 @@ async function loadMessages() {
   messagesDiv.innerHTML     = '';
 
   for (const msg of data) {
+    const ts = new Date(msg.timestamp).toLocaleString(
+      'en-NZ',
+      { timeZone: userTimeZone }
+    );
     const div = document.createElement('div');
     div.className = 'message';
-    div.innerHTML = `
-      <span class="meta">[${new Date(msg.timestamp)
-        .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}] 
-        ${msg.username}:</span> ${msg.content}`;
+    div.innerHTML = `<span class="meta">[${ts}] ${msg.username}:</span> ${msg.content}`;
     if (userRole === 'admin') {
       const pinBtn = document.createElement('button');
       pinBtn.className = 'pin-btn';
@@ -212,17 +218,15 @@ async function loadMessages() {
     (msg.pinned ? pinnedContainer : messagesDiv).appendChild(div);
   }
 
-  // Auto-scroll once per channel
-  if (!initialScrolled[currentChannel]) {
+  // auto-scroll only once per channel
+  if (!initialScrolledMsgs[currentChannel]) {
     const lastMsg = messagesDiv.lastElementChild;
-    if (lastMsg) {
-      lastMsg.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-    initialScrolled[currentChannel] = true;
+    if (lastMsg) lastMsg.scrollIntoView({ behavior:'smooth', block:'end' });
+    initialScrolledMsgs[currentChannel] = true;
   }
 }
 
-// Send a new message
+// Send message
 async function sendMessage() {
   const content = messageText.value.trim();
   if (!content) return;
@@ -236,7 +240,7 @@ async function sendMessage() {
   loadMessages();
 }
 
-// Toggle pin
+// Pin/unpin
 async function togglePin(id, pinned) {
   await fetch('/api/messages/pin', {
     method: 'POST',
@@ -247,15 +251,15 @@ async function togglePin(id, pinned) {
   loadMessages();
 }
 
-// Delete a message
+// Delete
 async function deleteMessage(id) {
-  await fetch(`/api/messages?id=${id}`, { method: 'DELETE', credentials: 'include' });
+  await fetch(`/api/messages?id=${id}`, { method:'DELETE', credentials:'include' });
   loadMessages();
 }
 
-// Load and display shared files
+// Load shared files (one-time auto-scroll)
 async function loadFiles() {
-  const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials: 'include' });
+  const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials:'include' });
   if (!res.ok) return;
   const data = await res.json();
 
@@ -278,63 +282,62 @@ async function loadFiles() {
     } else {
       thumb = document.createElement('i');
       const iconMap = {
-        pdf:'fa-file-pdf',doc:'fa-file-word',docx:'fa-file-word',
-        xls:'fa-file-excel',xlsx:'fa-file-excel',
-        ppt:'fa-file-powerpoint',pptx:'fa-file-powerpoint'
+        pdf:'fa-file-pdf', doc:'fa-file-word', docx:'fa-file-word',
+        xls:'fa-file-excel', xlsx:'fa-file-excel',
+        ppt:'fa-file-powerpoint', pptx:'fa-file-powerpoint'
       };
       thumb.className = `file-icon fas ${iconMap[ext]||'fa-file'}`;
     }
     li.appendChild(thumb);
 
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'file-name';
-    nameSpan.innerHTML = `<a href="${url}" target="_blank">${fn}</a>`;
-    li.appendChild(nameSpan);
+    const span = document.createElement('span');
+    span.className = 'file-name';
+    span.innerHTML = `<a href="${url}" target="_blank">${fn}</a>`;
+    li.appendChild(span);
 
     if (userRole === 'admin') {
-      const delBtn = document.createElement('button');
-      delBtn.className = 'file-delete';
-      delBtn.textContent = '×';
-      delBtn.onclick = async () => {
+      const db = document.createElement('button');
+      db.className = 'file-delete';
+      db.textContent = '×';
+      db.onclick = async () => {
         if (!confirm(`Delete ${fn}?`)) return;
         await fetch(`/api/upload?key=${encodeURIComponent(key)}`, {
-          method: 'DELETE',
-          credentials: 'include'
+          method:'DELETE', credentials:'include'
         });
         loadFiles();
       };
-      li.appendChild(delBtn);
+      li.appendChild(db);
     }
 
     filesList.appendChild(li);
   }
 
-  // initial scroll of files pane if not done
-  if (!initialScrolled[currentChannel + '_files']) {
-    filesSection.scrollTo({ top: filesSection.scrollHeight, behavior: 'smooth' });
-    initialScrolled[currentChannel + '_files'] = true;
+  if (!initialScrolledFiles[currentChannel]) {
+    filesSection.scrollTo({ top: filesSection.scrollHeight, behavior:'smooth' });
+    initialScrolledFiles[currentChannel] = true;
   }
 }
 
-// Upload a file and post its link
+// Upload file
 async function uploadFile() {
-  const file = fileInput.files[0];
-  if (!file) return alert('No file selected');
-  const form = new FormData();
-  form.append('file', file);
+  const f = fileInput.files[0];
+  if (!f) return alert('No file selected');
+  const fm = new FormData(); fm.append('file', f);
 
-  const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: form });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    return alert('Upload failed: ' + (err.error || res.status));
+  const r = await fetch('/api/upload', { method:'POST', credentials:'include', body:fm });
+  if (!r.ok) {
+    const e = await r.json().catch(()=>({}));
+    return alert('Upload failed: ' + (e.error || r.status));
   }
-  const { filename, url } = await res.json();
+  const { filename, url } = await r.json();
 
   await fetch('/api/messages', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: `<a href="${url}" target="_blank">${filename}</a>`, channel: currentChannel })
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      content:`<a href="${url}" target="_blank">${filename}</a>`,
+      channel: currentChannel
+    })
   });
 
   fileInput.value = '';
@@ -342,5 +345,5 @@ async function uploadFile() {
   loadMessages();
 }
 
-// Initialize
+// Start
 checkAuth();

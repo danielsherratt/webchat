@@ -1,6 +1,5 @@
 /* cesw_hub/style.css */
 @import url('https://fonts.googleapis.com/css2?family=Work+Sans&display=swap');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css');
 
 * {
   box-sizing: border-box;
@@ -98,7 +97,7 @@ body {
   cursor: pointer;
 }
 
-/* These containers scroll */
+/* Scrollable sections with sticky headings */
 #pinned-section,
 #messages-section,
 #shared-files {
@@ -106,8 +105,6 @@ body {
   overflow-y: auto;
   position: relative;
 }
-
-/* Stick headings */
 #pinned-section h3,
 #messages-section h3,
 #shared-files h3 {
@@ -120,7 +117,7 @@ body {
   border-bottom: 1px solid #e0e0e0;
 }
 
-/* Pinned */
+/* Pinned messages */
 #pinned-messages .message {
   background: #fffbea;
   border-left: 4px solid #00625f;
@@ -130,7 +127,7 @@ body {
 
 /* Messages */
 #messages {
-  flex: 1;
+  /* inner container, no overflow here */
 }
 .message {
   padding: 0.5rem;
@@ -176,7 +173,7 @@ body {
   cursor: pointer;
 }
 
-/* Input */
+/* Message input */
 #message-input {
   display: flex;
   padding: 0.5rem 1rem;
