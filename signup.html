@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>Sign Up</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <form id="signupForm">
@@ -12,15 +12,15 @@
     <input name="password" type="password" placeholder="Password" required>
     <input name="confirmPassword" type="password" placeholder="Confirm Password" required>
     <button type="submit">Sign Up</button>
-    <p>or <a href="/login.html">Log in</a></p>
+    <p>or <a href="login.html">Log in</a></p>
   </form>
   <script>
     document.getElementById('signupForm').onsubmit = async e => {
-      e.preventDefault();
-      const form = e.target;
+      e.preventDefault()
+      const form = e.target
       if (form.password.value !== form.confirmPassword.value) {
-        alert('Passwords do not match');
-        return;
+        alert('Passwords do not match')
+        return
       }
       const res = await fetch('/api/signup', {
         method: 'POST',
@@ -29,15 +29,15 @@
           username: form.username.value,
           password: form.password.value
         })
-      });
-      const j = await res.json();
+      })
+      const j = await res.json()
       if (j.success) {
-        alert('Sign-up successful! Please log in.');
-        location.href = '/login.html';
+        alert('Sign-up successful! Please log in.')
+        location.href = 'login.html'
       } else {
-        alert(j.error || 'Sign-up failed');
+        alert(j.error || 'Sign-up failed')
       }
-    };
+    }
   </script>
 </body>
 </html>
