@@ -1,0 +1,5 @@
+body { max-width:600px; margin:20px auto; font-family: sans-serif; }
+#feed { margin-bottom: 1em; }
+.msg { border-bottom:1px solid #ddd; padding:8px 0; }
+form { display:flex; flex-direction:column; gap:8px; }
+textarea { resize: vertical; min-height: 50px; }

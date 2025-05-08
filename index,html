@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Chat Feed</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="feed"></div>
+  <form id="postForm" enctype="multipart/form-data">
+    <textarea name="content" placeholder="Say something..." required></textarea>
+    <input type="file" name="file">
+    <button type="submit">Post</button>
+  </form>
+  <script src="/script.js"></script>
+</body>
+</html>
