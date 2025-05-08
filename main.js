@@ -35,7 +35,10 @@ async function checkAuth() {
       const data = await res.json();
       userRole = data.role;
       showChat();
-      if (userRole === 'admin') uploadBtn.style.display = 'inline-block';
+      // Show upload button only for admin
+      if (userRole === 'admin') {
+        uploadBtn.style.display = 'inline-block';
+      }
       startChat();
       return;
     }
@@ -127,8 +130,7 @@ async function loadMessages() {
       const div = document.createElement('div');
       div.className = 'message';
       div.innerHTML = `<span class="meta">[${new Date(msg.timestamp)
-        .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}] 
-        ${msg.username}:</span> ${msg.content}`;
+        .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}] ${msg.username}:</span> ${msg.content}`;
 
       if (userRole === 'admin') {
         const pinBtn = document.createElement('button');
@@ -136,7 +138,6 @@ async function loadMessages() {
         pinBtn.textContent = msg.pinned ? 'Unpin' : 'Pin';
         pinBtn.onclick = () => togglePin(msg.id, !msg.pinned);
         div.appendChild(pinBtn);
-
         const delBtn = document.createElement('button');
         delBtn.className = 'delete-btn';
         delBtn.textContent = 'Delete';
@@ -145,7 +146,7 @@ async function loadMessages() {
       }
 
       if (msg.pinned) pinnedContainer.appendChild(div);
-      else             messagesDiv.appendChild(div);
+      else messagesDiv.appendChild(div);
     });
   } catch (e) {
     console.error('loadMessages error', e);
@@ -208,15 +209,7 @@ async function loadFiles() {
         thumb.className = 'file-thumb';
       } else {
         thumb = document.createElement('i');
-        const iconMap = {
-          pdf: 'fa-file-pdf',
-          doc: 'fa-file-word',
-          docx: 'fa-file-word',
-          xls: 'fa-file-excel',
-          xlsx: 'fa-file-excel',
-          ppt: 'fa-file-powerpoint',
-          pptx: 'fa-file-powerpoint'
-        };
+        const iconMap = { pdf:'fa-file-pdf', doc:'fa-file-word', docx:'fa-file-word', xls:'fa-file-excel', xlsx:'fa-file-excel', ppt:'fa-file-powerpoint', pptx:'fa-file-powerpoint' };
         thumb.className = `file-icon fas ${iconMap[ext] || 'fa-file'}`;
       }
       li.appendChild(thumb);
@@ -227,20 +220,22 @@ async function loadFiles() {
       nameSpan.innerHTML = `<a href="${f.url}" target="_blank">${f.filename}</a>`;
       li.appendChild(nameSpan);
 
-      // Delete button
-      const delBtn = document.createElement('button');
-      delBtn.className = 'file-delete';
-      delBtn.textContent = '×';
-      delBtn.onclick = async () => {
-        if (!confirm(`Delete ${f.filename}?`)) return;
-        const dres = await fetch(`/api/upload?key=${encodeURIComponent(f.key)}`, {
-          method: 'DELETE',
-          credentials: 'include'
-        });
-        if (dres.ok) loadFiles();
-        else alert('Delete failed');
-      };
-      li.appendChild(delBtn);
+      // Delete button only for admin
+      if (userRole === 'admin') {
+        const delBtn = document.createElement('button');
+        delBtn.className = 'file-delete';
+        delBtn.textContent = '×';
+        delBtn.onclick = async () => {
+          if (!confirm(`Delete ${f.filename}?`)) return;
+          const dres = await fetch(`/api/upload?key=${encodeURIComponent(f.key)}`, {
+            method: 'DELETE',
+            credentials: 'include'
+          });
+          if (dres.ok) loadFiles();
+          else alert('Delete failed');
+        };
+        li.appendChild(delBtn);
+      }
 
       filesList.appendChild(li);
     });
@@ -271,7 +266,7 @@ async function uploadFile() {
     await fetch('/api/messages', {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type':'application/json' },
       body: JSON.stringify({
         content: `<a href="${url}" target="_blank">${filename}</a>`,
         channel: currentChannel
