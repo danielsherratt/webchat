@@ -1,6 +1,14 @@
 // File: cesw_hub/functions/api/upload.js
 
 export async function onRequestPost({ request, env }) {
+  // Verify binding exists
+  if (!env.CESW_Hub_Bucket) {
+    return new Response(JSON.stringify({ error: 'R2 bucket binding not found' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   // Authenticate & authorize
   const cookie = request.headers.get('Cookie') || '';
   const token  = cookie.split('; ').find(c => c.startsWith('token='))?.split('=')[1];
@@ -38,6 +46,7 @@ export async function onRequestPost({ request, env }) {
 
   const arrayBuffer = await file.arrayBuffer();
   try {
+    // Upload to R2
     await env.CESW_Hub_Bucket.put(file.name, arrayBuffer, {
       httpMetadata: { contentType: file.type }
     });
@@ -48,6 +57,7 @@ export async function onRequestPost({ request, env }) {
     });
   }
 
+  // Construct public URL
   const url = `https://webchat.danieltesting.space/${encodeURIComponent(file.name)}`;
   return new Response(JSON.stringify({ filename: file.name, url }), {
     status: 201,
@@ -56,11 +66,21 @@ export async function onRequestPost({ request, env }) {
 }
 
 export async function onRequestGet({ request, env }) {
+  // Verify binding exists
+  if (!env.CESW_Hub_Bucket) {
+    return new Response(JSON.stringify({ error: 'R2 bucket binding not found' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // List all objects
   const { objects } = await env.CESW_Hub_Bucket.list();
   const files = objects.map(o => ({
     filename: o.key,
     url: `https://webchat.danieltesting.space/${encodeURIComponent(o.key)}`
   }));
+
   return new Response(JSON.stringify(files), {
     status: 200,
     headers: { 'Content-Type': 'application/json' }
