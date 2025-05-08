@@ -1,8 +1,10 @@
+// unchanged - form posts to /api/signup
 document.getElementById('signupForm').onsubmit = async e => {
   e.preventDefault();
   const form = e.target;
   if (form.password.value !== form.confirmPassword.value) {
-    return alert('Passwords do not match');
+    alert('Passwords do not match');
+    return;
   }
   const res = await fetch('/api/signup', {
     method: 'POST',
@@ -14,9 +16,9 @@ document.getElementById('signupForm').onsubmit = async e => {
   });
   const j = await res.json();
   if (j.success) {
-    alert('Sign-up successful! Please log in.');
+    alert('Sign‑up successful! Please log in.');
     location.href = 'login.html';
   } else {
-    alert(j.error || 'Sign-up failed');
+    alert(j.error || 'Sign‑up failed');
   }
 };

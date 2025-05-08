@@ -3,6 +3,7 @@ document.getElementById('loginForm').onsubmit = async e => {
   const form = e.target;
   const res = await fetch('/api/login', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       username: form.username.value,
@@ -10,10 +11,10 @@ document.getElementById('loginForm').onsubmit = async e => {
     })
   });
   const j = await res.json();
-  if (j.token) {
-    localStorage.setItem('token', j.token);
+  if (j.success) {
+    // session cookie set; redirect
     location.href = 'index.html';
   } else {
-    alert(j.error);
+    alert(j.error || 'Login failed');
   }
 };

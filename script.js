@@ -1,13 +1,9 @@
-const token = localStorage.getItem('token');
-if (!token) location.href = 'login.html';
-
 const feed = document.getElementById('feed');
 const form = document.getElementById('postForm');
 
 async function loadMessages() {
-  const res = await fetch('/api/messages', {
-    headers: { 'Authorization': 'Bearer ' + token }
-  });
+  const res = await fetch('/api/messages', { credentials: 'include' });
+  if (res.status === 401) return location.href = 'login.html';
   const msgs = await res.json();
   feed.innerHTML = msgs.map(m => `
     <div class="msg">
@@ -25,7 +21,7 @@ form.onsubmit = async e => {
   const data = new FormData(form);
   await fetch('/api/message', {
     method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + token },
+    credentials: 'include',
     body: data
   });
   form.reset();
