@@ -8,7 +8,7 @@
   <title>CESW Hub</title>
   <!-- Google Font -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans&display=swap" />
-  <!-- Font Awesome for file icons -->
+  <!-- Font Awesome -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -35,10 +35,8 @@
       <button id="logout-btn">Logout</button>
     </div>
 
-    <div id="channel-selector">
-      <button data-channel="everyone" class="active">Everyone</button>
-      <button data-channel="admin">Admins</button>
-    </div>
+    <!-- dynamically populated -->
+    <div id="channel-selector"></div>
 
     <div id="pinned-section">
       <h3>Pinned Messages</h3>
