@@ -1,4 +1,4 @@
-// File: cesw_hub/main.js
+// cesw_hub/main.js
 
 // Elements
 const loginContainer  = document.getElementById('login-container');
@@ -18,17 +18,17 @@ const uploadBtn       = document.getElementById('upload-btn');
 
 let userRole, userId, currentChannel = 'everyone', messageInterval;
 
-// Show/hide helpers
-function showLogin() {
+// Show/hide functions
+const showLogin = () => {
   loginContainer.style.display = 'block';
   chatContainer.style.display  = 'none';
-}
-function showChat() {
+};
+const showChat = () => {
   loginContainer.style.display = 'none';
   chatContainer.style.display  = 'flex';
-}
+};
 
-// 1) Check authentication and initialize
+// 1) Auth check & init
 async function checkAuth() {
   try {
     const res = await fetch('/api/auth', { credentials: 'include' });
@@ -49,74 +49,50 @@ async function checkAuth() {
   showLogin();
 }
 
-// 2) Build and sort the channel list
+// 2) Build & sort sidebar channels
 async function loadChannels() {
   const channels = [];
-
-  // Everyone channel
-  let msgs = await fetch(`/api/messages?channel=everyone`, { credentials: 'include' })
-                    .then(r => r.json());
+  // Everyone
+  let msgs = await fetch(`/api/messages?channel=everyone`, { credentials: 'include' }).then(r => r.json());
   let last = msgs[msgs.length - 1];
-  channels.push({
-    key:    'everyone',
-    label:  'Everyone',
-    ts:     last?.timestamp || 0,
-    author: last?.authorRole || null
-  });
+  channels.push({ key:'everyone', label:'Everyone', ts:last?.timestamp||0, author:last?.authorRole||null });
 
-  // Private channels
   if (userRole === 'member') {
-    // Member sees one private chat (with admins)
+    // Member sees only one private chat with admins
     const key = `private-${userId}`;
-    msgs = await fetch(`/api/messages?channel=${key}`, { credentials: 'include' })
-              .then(r => r.json());
+    msgs = await fetch(`/api/messages?channel=${key}`, { credentials: 'include' }).then(r => r.json());
     last = msgs[msgs.length - 1];
-    channels.push({
-      key,
-      label: 'Admin',
-      ts:    last?.timestamp || 0,
-      author:last?.authorRole || null
-    });
+    channels.push({ key, label:'Admin', ts:last?.timestamp||0, author:last?.authorRole||null });
   } else {
-    // Admin sees one private chat per member
-    const users = await fetch('/api/users', { credentials: 'include' })
-                       .then(r => r.json());
+    // Admin sees one per member
+    const users = await fetch('/api/users', { credentials: 'include' }).then(r => r.json());
     for (const u of users.filter(u => u.role === 'member')) {
       const key = `private-${u.id}`;
-      msgs = await fetch(`/api/messages?channel=${key}`, { credentials: 'include' })
-                .then(r => r.json());
+      msgs = await fetch(`/api/messages?channel=${key}`, { credentials: 'include' }).then(r => r.json());
       last = msgs[msgs.length - 1];
-      channels.push({
-        key,
-        label: u.username,
-        ts:    last?.timestamp || 0,
-        author:last?.authorRole || null
-      });
+      channels.push({ key, label:u.username, ts:last?.timestamp||0, author:last?.authorRole||null });
     }
   }
 
-  // Sort channels by timestamp, but keep Everyone at top
+  // Sort by timestamp, keep Everyone pinned at top
   const [everyone, ...rest] = channels;
-  rest.sort((a, b) => b.ts - a.ts);
+  rest.sort((a,b) => b.ts - a.ts);
   const sorted = [everyone, ...rest];
 
-  // Render the list
   channelList.innerHTML = '';
   for (const ch of sorted) {
     const li = document.createElement('li');
-    // Append '*' only if you're an admin and the last message was from a member
-    li.textContent = ch.label 
-      + (userRole === 'admin' && ch.author === 'member' ? ' *' : '');
+    // Append '*' only if you're admin AND last author was member
+    li.textContent = ch.label + (userRole==='admin' && ch.author==='member' ? ' *' : '');
     li.dataset.channel = ch.key;
     if (ch.key === currentChannel) li.classList.add('active');
-    // Maintain bold styling for member-last channels
     if (ch.author === 'member') li.classList.add('bold');
     li.onclick = () => selectChannel(ch.key, ch.label);
     channelList.appendChild(li);
   }
 }
 
-// Switch channels when clicked
+// Switch channel handler
 function selectChannel(key, label) {
   currentChannel = key;
   chatTitle.textContent = label;
@@ -127,7 +103,7 @@ function selectChannel(key, label) {
   loadFiles();
 }
 
-// 3) Start polling for messages/files
+// 3) Polling loop
 function startPolling() {
   loadMessages();
   loadFiles();
@@ -139,13 +115,13 @@ function startPolling() {
   }, 1000);
 }
 
-// 4) Handle login submission
+// 4) Login submit
 loginForm.onsubmit = async e => {
   e.preventDefault();
   const res = await fetch('/api/login', {
     method:     'POST',
     credentials:'include',
-    headers:    { 'Content-Type': 'application/json' },
+    headers:    {'Content-Type':'application/json'},
     body:       JSON.stringify({
       username: document.getElementById('username').value,
       password: document.getElementById('password').value
@@ -157,16 +133,15 @@ loginForm.onsubmit = async e => {
 
 // Logout
 logoutBtn.onclick = async () => {
-  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  await fetch('/api/logout', { method:'POST', credentials:'include' });
   clearInterval(messageInterval);
   showLogin();
 };
 
-// Message input: Enter to send, Ctrl+Enter for newline
+// Message input behavior
 messageText.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.ctrlKey) {
-    e.preventDefault();
-    sendMessage();
+    e.preventDefault(); sendMessage();
   } else if (e.key === 'Enter' && e.ctrlKey) {
     messageText.value += '\n';
   }
@@ -175,9 +150,9 @@ sendBtn.onclick   = sendMessage;
 uploadBtn.onclick = () => fileInput.click();
 fileInput.onchange = uploadFile;
 
-// Load messages (oldest at top, auto-scroll)
+// Load messages (oldest→newest, no animation)
 async function loadMessages() {
-  const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials: 'include' });
+  const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials:'include' });
   if (!res.ok) return;
   const data = await res.json();
 
@@ -191,72 +166,67 @@ async function loadMessages() {
       <span class="meta">[${new Date(msg.timestamp)
         .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}] 
       ${msg.username}:</span> ${msg.content}`;
-
     if (userRole === 'admin') {
       const pinBtn = document.createElement('button');
       pinBtn.className = 'pin-btn';
       pinBtn.textContent = msg.pinned ? 'Unpin' : 'Pin';
       pinBtn.onclick = () => togglePin(msg.id, !msg.pinned);
       div.appendChild(pinBtn);
-
       const delBtn = document.createElement('button');
       delBtn.className = 'delete-btn';
       delBtn.textContent = 'Delete';
       delBtn.onclick = () => deleteMessage(msg.id);
       div.appendChild(delBtn);
     }
-
-    if (msg.pinned) pinnedContainer.appendChild(div);
-    else             messagesDiv.appendChild(div);
+    msg.pinned ? pinnedContainer.appendChild(div) : messagesDiv.appendChild(div);
   });
 
-  // Scroll to bottom
+  // Jump straight to bottom
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// Send a new message
+// Send a message
 async function sendMessage() {
   const content = messageText.value.trim();
   if (!content) return;
   await fetch('/api/messages', {
     method:     'POST',
     credentials:'include',
-    headers:    { 'Content-Type': 'application/json' },
+    headers:    {'Content-Type':'application/json'},
     body:       JSON.stringify({ content, channel: currentChannel })
   });
   messageText.value = '';
   loadMessages();
 }
 
-// Toggle pin status
+// Pin/unpin
 async function togglePin(id, pinned) {
   await fetch('/api/messages/pin', {
     method:     'POST',
     credentials:'include',
-    headers:    { 'Content-Type': 'application/json' },
+    headers:    {'Content-Type':'application/json'},
     body:       JSON.stringify({ id, pinned })
   });
   loadMessages();
 }
 
-// Delete a message
+// Delete message
 async function deleteMessage(id) {
-  await fetch(`/api/messages?id=${id}`, { method: 'DELETE', credentials: 'include' });
+  await fetch(`/api/messages?id=${id}`, { method:'DELETE', credentials:'include' });
   loadMessages();
 }
 
-// Load files that were posted in the current channel
+// Load files posted in this channel (no animation)
 async function loadFiles() {
-  const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials: 'include' });
+  const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials:'include' });
   if (!res.ok) return;
   const data = await res.json();
   filesList.innerHTML = '';
 
   data.forEach(msg => {
-    const match = msg.content.match(/<a href="([^"]+)" target="_blank">([^<]+)<\/a>/);
-    if (!match) return;
-
-    const [, url, filename] = match;
+    const m = msg.content.match(/<a href="([^"]+)" target="_blank">([^<]+)<\/a>/);
+    if (!m) return;
+    const [, url, filename] = m;
     const key = decodeURIComponent(url.split('/').pop());
     const ext = filename.split('.').pop().toLowerCase();
 
@@ -271,15 +241,11 @@ async function loadFiles() {
     } else {
       thumb = document.createElement('i');
       const iconMap = {
-        pdf:  'fa-file-pdf',
-        doc:  'fa-file-word',
-        docx: 'fa-file-word',
-        xls:  'fa-file-excel',
-        xlsx: 'fa-file-excel',
-        ppt:  'fa-file-powerpoint',
-        pptx: 'fa-file-powerpoint'
+        pdf:'fa-file-pdf',doc:'fa-file-word',docx:'fa-file-word',
+        xls:'fa-file-excel',xlsx:'fa-file-excel',
+        ppt:'fa-file-powerpoint',pptx:'fa-file-powerpoint'
       };
-      thumb.className = `file-icon fas ${iconMap[ext] || 'fa-file'}`;
+      thumb.className = `file-icon fas ${iconMap[ext]||'fa-file'}`;
     }
     li.appendChild(thumb);
 
@@ -295,8 +261,7 @@ async function loadFiles() {
       delBtn.onclick = async () => {
         if (!confirm(`Delete ${filename}?`)) return;
         await fetch(`/api/upload?key=${encodeURIComponent(key)}`, {
-          method:     'DELETE',
-          credentials: 'include'
+          method:'DELETE', credentials:'include'
         });
         loadFiles();
       };
@@ -305,9 +270,13 @@ async function loadFiles() {
 
     filesList.appendChild(li);
   });
+
+  // Jump to bottom
+  const sharedDiv = document.getElementById('shared-files');
+  sharedDiv.scrollTop = sharedDiv.scrollHeight;
 }
 
-// Upload to R2 and post as a message
+// Upload and post link
 async function uploadFile() {
   const file = fileInput.files[0];
   if (!file) return alert('No file selected');
@@ -316,7 +285,7 @@ async function uploadFile() {
 
   const res = await fetch('/api/upload', {
     method:     'POST',
-    credentials: 'include',
+    credentials:'include',
     body:        form
   });
   if (!res.ok) {
@@ -325,11 +294,11 @@ async function uploadFile() {
   }
   const { filename, url } = await res.json();
 
-  // Post link in chat
+  // Post as message
   await fetch('/api/messages', {
     method:     'POST',
-    credentials: 'include',
-    headers:    { 'Content-Type': 'application/json' },
+    credentials:'include',
+    headers:    {'Content-Type':'application/json'},
     body:       JSON.stringify({
       content: `<a href="${url}" target="_blank">${filename}</a>`,
       channel: currentChannel
@@ -341,5 +310,5 @@ async function uploadFile() {
   loadMessages();
 }
 
-// Kick off authentication on page load
+// Kick things off
 checkAuth();

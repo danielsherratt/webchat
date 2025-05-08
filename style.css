@@ -135,3 +135,27 @@ body {
   margin-left: 0.5rem;
   background: #00625f;
 }
+
+/* ensure no animation on scroll */
+#messages,
+#shared-files {
+  scroll-behavior: auto !important;
+}
+
+/* Logo + title in sidebar */
+#logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+#logo img {
+  width: 32px;
+  height: 32px;
+}
+.logo-text {
+  margin-left: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #fff;
+}

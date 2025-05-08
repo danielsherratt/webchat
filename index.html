@@ -20,6 +20,7 @@
 <body>
   <div id="login-container">
     <h1>CESW Hub</h1>
+    <img src="/logo.png" alt="CESW Hub Logo" />
     <form id="login-form">
       <input type="text" id="username" placeholder="Username" required />
       <input type="password" id="password" placeholder="Password" required />
@@ -29,6 +30,11 @@
 
   <div id="chat-container" style="display:none;">
     <aside id="sidebar">
+      <!-- Logo + Title -->
+      <div id="logo">
+        <img src="/logo.png" alt="CESW Hub Logo" />
+        <span class="logo-text">CESW Hub</span>
+      </div>
       <div id="user-info">Logged in as: <span id="current-user"></span></div>
       <ul id="channel-list"></ul>
     </aside>
@@ -38,22 +44,18 @@
         <h2 id="chat-title">Everyone</h2>
         <button id="logout-btn">Logout</button>
       </header>
-
       <div id="pinned-section">
         <h3>Pinned</h3>
         <div id="pinned-messages"></div>
       </div>
-
       <div id="messages-section">
         <h3>Messages</h3>
         <div id="messages"></div>
       </div>
-
       <div id="shared-files">
         <h3>Shared Files</h3>
         <ul id="files-list"></ul>
       </div>
-
       <div id="message-input">
         <textarea id="message-text" rows="2" placeholder="Type a message…"></textarea>
         <button id="send-btn">Send</button>
