@@ -6,9 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CESW Hub</title>
-  <!-- Google Font -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans&display=swap" />
-  <!-- Font Awesome -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -30,38 +28,39 @@
   </div>
 
   <div id="chat-container" style="display:none;">
-    <div id="chat-header">
-      <h2 id="chat-title">Everyone Chat</h2>
-      <!-- New user info display -->
-      <div id="user-info" style="font-size:0.9rem; color:#666;">
-        Logged in as: <span id="current-user"></span>
+    <aside id="sidebar">
+      <div id="user-info">Logged in as: <span id="current-user"></span></div>
+      <ul id="channel-list"></ul>
+    </aside>
+
+    <section id="chat-main">
+      <header id="chat-header">
+        <h2 id="chat-title">Everyone</h2>
+        <button id="logout-btn">Logout</button>
+      </header>
+
+      <div id="pinned-section">
+        <h3>Pinned</h3>
+        <div id="pinned-messages"></div>
       </div>
-      <button id="logout-btn">Logout</button>
-    </div>
 
-    <div id="channel-selector"></div>
+      <div id="messages-section">
+        <h3>Messages</h3>
+        <div id="messages"></div>
+      </div>
 
-    <div id="pinned-section">
-      <h3>Pinned Messages</h3>
-      <div id="pinned-messages"></div>
-    </div>
+      <div id="shared-files">
+        <h3>Shared Files</h3>
+        <ul id="files-list"></ul>
+      </div>
 
-    <div id="messages-section">
-      <h3>Messages</h3>
-      <div id="messages"></div>
-    </div>
-
-    <div id="shared-files">
-      <h3>Shared Files</h3>
-      <ul id="files-list"></ul>
-    </div>
-
-    <div id="message-input">
-      <textarea id="message-text" rows="2" placeholder="Type a message…"></textarea>
-      <button id="send-btn">Send</button>
-      <input type="file" id="file-input" style="display:none;" />
-      <button id="upload-btn" style="display:none;">Upload File</button>
-    </div>
+      <div id="message-input">
+        <textarea id="message-text" rows="2" placeholder="Type a message…"></textarea>
+        <button id="send-btn">Send</button>
+        <input type="file" id="file-input" style="display:none;" />
+        <button id="upload-btn" style="display:none;">Upload</button>
+      </div>
+    </section>
   </div>
 </body>
 </html>

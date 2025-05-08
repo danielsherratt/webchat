@@ -1,59 +1,92 @@
 /* cesw_hub/style.css */
 @import url('https://fonts.googleapis.com/css2?family=Work+Sans&display=swap');
 
+* { box-sizing: border-box; margin:0; padding:0; }
+
 body {
   font-family: 'Work Sans', sans-serif;
   background: #f4f6f8;
-  margin: 0;
-  padding: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-#login-container,
-#chat-container {
-  max-width: 800px;
-  width: 90%;
-  margin: 2rem auto;
+#login-container {
+  width: 320px;
   background: #fff;
   padding: 1.5rem;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-#login-container h1,
-#chat-header h2 {
-  color: #00625f;
+#chat-container {
+  width: 90%;
+  height: 90%;
+  display: flex;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
 }
 
-button {
+/* sidebar */
+#sidebar {
+  width: 200px;
   background: #00625f;
   color: #fff;
-  border: none;
-  padding: 0.5rem 1rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+#user-info {
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+#channel-list {
+  list-style: none;
+  flex: 1;
+  overflow-y: auto;
+}
+#channel-list li {
+  padding: 0.5rem;
   cursor: pointer;
   border-radius: 4px;
+  margin-bottom: 0.25rem;
 }
-button:hover {
+#channel-list li.active {
   background: #003541;
 }
-
-#channel-selector button {
-  background: transparent;
-  color: #00625f;
-  border: 1px solid #00625f;
-  margin-right: 0.5rem;
+#channel-list li.bold {
+  font-weight: bold;
 }
-#channel-selector button.active {
+
+/* main chat area */
+#chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+#chat-header {
   background: #00625f;
   color: #fff;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#chat-header h2 { font-size: 1.2rem; }
+#chat-header button {
+  background: #f44336;
+  padding: 0.4rem 0.8rem;
 }
 
-#pinned-section h3,
-#messages-section h3,
-#shared-files h3 {
-  margin: 0.5rem 0;
-  color: #00625f;
+#pinned-section,
+#messages-section,
+#shared-files {
+  padding: 0.5rem 1rem;
+  overflow-y: auto;
 }
-
 #pinned-messages .message {
   background: #fffbea;
   border-left: 4px solid #00625f;
@@ -62,71 +95,35 @@ button:hover {
 }
 
 #messages {
-  max-height: 300px;
-  overflow-y: auto;
-  margin: 0.5rem 0;
+  flex: 1;
 }
-
 .message {
   padding: 0.5rem;
   border-bottom: 1px solid #e0e0e0;
 }
-
-.message .meta {
-  font-size: 0.8rem;
-  color: #666;
+.meta { font-size: 0.8rem; color: #666; }
+.pin-btn, .delete-btn {
+  background: none; border: none; cursor: pointer; margin-left: 0.5rem;
 }
 
-.pin-btn,
-.delete-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  margin-left: 0.5rem;
-}
-
-#shared-files ul {
-  list-style: none;
-  padding: 0;
-}
-
-/* File‐item thumbnail/icon styles */
 .file-item {
-  display: flex;
-  align-items: center;
-  margin: 0.5rem 0;
+  display: flex; align-items: center; margin-bottom: 0.5rem;
 }
 .file-thumb {
-  width: 32px; height: 32px;
-  object-fit: cover;
-  border-radius: 4px;
-  margin-right: 0.5rem;
-  flex-shrink: 0;
+  width: 32px; height: 32px; object-fit: cover; border-radius: 4px; margin-right: 0.5rem;
 }
 .file-icon {
-  font-size: 1.5rem;
-  color: #00625f;
-  margin-right: 0.5rem;
-  width: 32px; height: 32px;
-  text-align: center;
-  line-height: 32px;
+  font-size: 1.5rem; color: #00625f; margin-right: 0.5rem;
 }
-.file-name {
-  flex: 1;
-}
+.file-name { flex: 1; }
 .file-delete {
-  background: none;
-  border: none;
-  color: #c00;
-  font-size: 1.2rem;
-  cursor: pointer;
-  margin-left: 0.5rem;
+  background: none; border: none; color: #c00; font-size: 1.2rem; cursor: pointer;
 }
 
 #message-input {
   display: flex;
-  align-items: center;
-  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #ddd;
 }
 #message-input textarea {
   flex: 1;
@@ -134,6 +131,7 @@ button:hover {
   border: 1px solid #ccc;
   border-radius: 4px;
 }
-#message-input #send-btn {
+#message-input button {
   margin-left: 0.5rem;
+  background: #00625f;
 }

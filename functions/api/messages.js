@@ -1,12 +1,8 @@
-// File: cesw_hub/functions/api/messages.js
+// cesw_hub/functions/api/messages.js
 
 export async function onRequest({ request, env }) {
-  // authenticate
   const cookie = request.headers.get('Cookie') || '';
-  const token = cookie
-    .split('; ')
-    .find(c => c.startsWith('token='))
-    ?.split('=')[1];
+  const token  = cookie.split('; ').find(c => c.startsWith('token='))?.split('=')[1];
   const session = await env.D1_CESW
     .prepare('SELECT user_id FROM sessions WHERE token = ?')
     .bind(token)
@@ -19,31 +15,30 @@ export async function onRequest({ request, env }) {
     .first();
   if (!user) return new Response(null, { status: 401 });
 
-  const url = new URL(request.url);
+  const url     = new URL(request.url);
   const channel = url.searchParams.get('channel');
-  const all = url.searchParams.get('all');
+  const all     = url.searchParams.get('all');
 
   if (request.method === 'GET') {
-    const res = await env.D1_CESW
-      .prepare(
-        `SELECT messages.id,
-                users.username,
-                channel,
-                content,
-                timestamp,
-                pinned
-         FROM messages
-         JOIN users ON messages.user_id = users.id
-         WHERE channel = ?
-         ORDER BY timestamp ASC`
-      )
-      .bind(channel)
-      .all();
+    const res = await env.D1_CESW.prepare(`
+      SELECT
+        messages.id,
+        users.username,
+        users.role   AS authorRole,
+        channel,
+        content,
+        timestamp,
+        pinned
+      FROM messages
+      JOIN users ON messages.user_id = users.id
+      WHERE channel = ?
+      ORDER BY timestamp ASC
+    `).bind(channel).all();
+
     return new Response(JSON.stringify(res.results), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type':'application/json' }
     });
-
   } else if (request.method === 'POST') {
     // pin endpoint
     if (url.pathname.endsWith('/pin')) {
