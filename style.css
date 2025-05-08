@@ -81,8 +81,8 @@ body {
   flex-direction: column;
 }
 #logout-btn {
-  color: #00625f;
-  background: #00625f;
+  color: #00625f !important;
+  background: #00625f !important;
 }
 
 #chat-header {
