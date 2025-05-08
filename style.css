@@ -2,7 +2,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Work+Sans&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css');
 
-* { box-sizing: border-box; margin:0; padding:0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 body {
   font-family: 'Work Sans', sans-serif;
@@ -17,19 +21,21 @@ body {
   width: 320px;
   background: #fff;
   padding: 1.5rem;
+  border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 #chat-container {
-  width: 100%;
-  height: 100%;
+  width: 90%;
+  height: 90%;
   display: flex;
   background: #fff;
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0,0,0,0.15);
 }
 
-/* sidebar */
+/* Sidebar */
 #sidebar {
   width: 200px;
   background: #00625f;
@@ -37,6 +43,22 @@ body {
   padding: 1rem;
   display: flex;
   flex-direction: column;
+}
+#logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+#logo img {
+  width: 32px;
+  height: 32px;
+}
+.logo-text {
+  margin-left: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #fff;
 }
 #user-info {
   margin-bottom: 1rem;
@@ -60,7 +82,7 @@ body {
   font-weight: bold;
 }
 
-/* main chat area */
+/* Main chat area */
 #chat-main {
   flex: 1;
   display: flex;
@@ -74,18 +96,40 @@ body {
   justify-content: space-between;
   align-items: center;
 }
-#chat-header h2 { font-size: 1.2rem; }
+#chat-header h2 {
+  font-size: 1.2rem;
+}
 #chat-header button {
   background: #f44336;
   padding: 0.4rem 0.8rem;
+  border: none;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
+/* Sections scrollable and sticky headings */
 #pinned-section,
 #messages-section,
 #shared-files {
   padding: 0.5rem 1rem;
   overflow-y: auto;
+  position: relative;
+  scroll-behavior: smooth;
 }
+#pinned-section h3,
+#messages-section h3,
+#shared-files h3 {
+  position: sticky;
+  top: 0;
+  margin: 0;
+  padding: 0.5rem 0;
+  background: #fff;
+  z-index: 1;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Pinned messages */
 #pinned-messages .message {
   background: #fffbea;
   border-left: 4px solid #00625f;
@@ -93,6 +137,7 @@ body {
   padding: 0.5rem;
 }
 
+/* Messages */
 #messages {
   flex: 1;
 }
@@ -100,25 +145,53 @@ body {
   padding: 0.5rem;
   border-bottom: 1px solid #e0e0e0;
 }
-.meta { font-size: 0.8rem; color: #666; }
-.pin-btn, .delete-btn {
-  background: none; border: none; cursor: pointer; margin-left: 0.5rem;
+.meta {
+  font-size: 0.8rem;
+  color: #666;
+}
+.pin-btn,
+.delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: 0.5rem;
 }
 
+/* Shared files */
 .file-item {
-  display: flex; align-items: center; margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
 }
 .file-thumb {
-  width: 32px; height: 32px; object-fit: cover; border-radius: 4px; margin-right: 0.5rem;
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
 }
 .file-icon {
-  font-size: 1.5rem; color: #00625f; margin-right: 0.5rem;
+  font-size: 1.5rem;
+  color: #00625f;
+  margin-right: 0.5rem;
+  width: 32px;
+  height: 32px;
+  text-align: center;
+  line-height: 32px;
 }
-.file-name { flex: 1; }
+.file-name {
+  flex: 1;
+}
 .file-delete {
-  background: none; border: none; color: #c00; font-size: 1.2rem; cursor: pointer;
+  background: none;
+  border: none;
+  color: #c00;
+  font-size: 1.2rem;
+  cursor: pointer;
 }
 
+/* Message input */
 #message-input {
   display: flex;
   padding: 0.5rem 1rem;
@@ -133,28 +206,9 @@ body {
 #message-input button {
   margin-left: 0.5rem;
   background: #00625f;
-}
-
-/* ensure no animation on scroll */
-#messages,
-#shared-files {
-  scroll-behavior: auto !important;
-}
-
-/* Logo + title in sidebar */
-#logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1rem;
-}
-#logo img {
-  width: 32px;
-  height: 32px;
-}
-.logo-text {
-  margin-left: 0.5rem;
-  font-size: 1.25rem;
-  font-weight: bold;
   color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
 }
