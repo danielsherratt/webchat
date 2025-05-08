@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Login</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <form id="loginForm">
@@ -11,7 +11,7 @@
     <input name="username" placeholder="Username" required>
     <input name="password" type="password" placeholder="Password" required>
     <button type="submit">Login</button>
-    <p>or <a href="/signup.html">Sign up</a></p>
+    <p>or <a href="signup.html">Sign up</a></p>
   </form>
   <script>
     document.getElementById('loginForm').onsubmit = async e => {
@@ -28,7 +28,7 @@
       const j = await res.json()
       if (j.token) {
         localStorage.setItem('token', j.token)
-        location.href = '/index.html'
+        location.href = 'index.html'
       } else {
         alert(j.error)
       }
