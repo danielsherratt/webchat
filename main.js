@@ -2,35 +2,45 @@
 
 const loginContainer = document.getElementById('login-container');
 const chatContainer = document.getElementById('chat-container');
-const loginForm = document.getElementById('login-form');
-const logoutBtn = document.getElementById('logout-btn');
-const messagesDiv = document.getElementById('messages');
-const messageText = document.getElementById('message-text');
-const sendBtn = document.getElementById('send-btn');
-const fileInput = document.getElementById('file-input');
-const uploadBtn = document.getElementById('upload-btn');
-const filesList = document.getElementById('files-list');
+const loginForm      = document.getElementById('login-form');
+const logoutBtn      = document.getElementById('logout-btn');
+const messagesDiv    = document.getElementById('messages');
+const messageText    = document.getElementById('message-text');
+const sendBtn        = document.getElementById('send-btn');
+const fileInput      = document.getElementById('file-input');
+const uploadBtn      = document.getElementById('upload-btn');
+const filesList      = document.getElementById('files-list');
 const channelButtons = document.querySelectorAll('#channel-selector button');
 
 let currentChannel = 'everyone';
-let userRole = null;
+let userRole       = null;
 
-// Check session on page load
-(async function checkAuth() {
+// 1) Define checkAuth as a global function
+async function checkAuth() {
   const res = await fetch('/api/auth', { credentials: 'include' });
   if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
-    const userData = await res.json();
-    userRole = userData.role;
+    // logged in
+    const { role } = await res.json();
+    userRole = role;
     loginContainer.style.display = 'none';
-    chatContainer.style.display = 'block';
+    chatContainer.style.display  = 'block';
     if (userRole === 'admin') uploadBtn.style.display = 'inline-block';
+
+    // start polling
     loadMessages();
     loadFiles();
     setInterval(loadMessages, 1000);
+  } else {
+    // not logged in
+    loginContainer.style.display = 'block';
+    chatContainer.style.display  = 'none';
   }
-})();
+}
 
-// Sign-in form
+// 2) Run it once on page load
+checkAuth();
+
+// 3) Wire up the login form to call checkAuth() again
 loginForm.onsubmit = async e => {
   e.preventDefault();
   const res = await fetch('/api/login', {
@@ -42,7 +52,10 @@ loginForm.onsubmit = async e => {
       password: document.getElementById('password').value
     })
   });
-  if (res.ok) return checkAuth();
+  if (res.ok) {
+    // re-check auth state
+    return checkAuth();
+  }
   alert('Login failed');
 };
 
@@ -52,7 +65,7 @@ logoutBtn.onclick = async () => {
   window.location.reload();
 };
 
-// Channel selector
+// Channel selector buttons
 channelButtons.forEach(btn => {
   btn.onclick = () => {
     channelButtons.forEach(b => b.classList.remove('active'));
@@ -72,11 +85,11 @@ messageText.onkeydown = e => {
   }
 };
 
-sendBtn.onclick = sendMessage;
+sendBtn.onclick  = sendMessage;
 uploadBtn.onclick = () => fileInput.click();
-fileInput.onchange = uploadFile;
+fileInput.onchange  = uploadFile;
 
-// Load messages
+// Load messages from the current channel
 async function loadMessages() {
   const res = await fetch(`/api/messages?channel=${currentChannel}`, {
     credentials: 'include'
@@ -89,7 +102,7 @@ async function loadMessages() {
     div.className = 'message';
     div.innerHTML = `
       <span class="meta">[${new Date(msg.timestamp)
-        .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}] 
+        .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}]
         ${msg.username}:</span> ${msg.content}`;
     if (userRole === 'admin') {
       const pinBtn = document.createElement('button');
@@ -97,6 +110,7 @@ async function loadMessages() {
       pinBtn.textContent = msg.pinned ? 'Unpin' : 'Pin';
       pinBtn.onclick = () => togglePin(msg.id, !msg.pinned);
       div.appendChild(pinBtn);
+
       const delBtn = document.createElement('button');
       delBtn.className = 'delete-btn';
       delBtn.textContent = 'Delete';
@@ -107,7 +121,7 @@ async function loadMessages() {
   });
 }
 
-// Send a new message
+// Send a new chat message
 async function sendMessage() {
   const content = messageText.value.trim();
   if (!content) return;
@@ -121,7 +135,7 @@ async function sendMessage() {
   loadMessages();
 }
 
-// Pin or unpin
+// Pin/unpin action
 async function togglePin(id, pinned) {
   const res = await fetch('/api/messages/pin', {
     method: 'POST',
@@ -142,7 +156,7 @@ async function deleteMessage(id) {
   loadMessages();
 }
 
-// Load shared files list
+// Load the shared files list
 async function loadFiles() {
   const res = await fetch('/api/files', { credentials: 'include' });
   if (!res.ok) return;
@@ -151,14 +165,14 @@ async function loadFiles() {
   data.forEach(f => {
     const li = document.createElement('li');
     li.innerHTML = `
-      <a href="/api/files?id=${f.id}">${f.filename}</a> 
+      <a href="/api/files?id=${f.id}">${f.filename}</a>
       [${new Date(f.timestamp)
         .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}]`;
     filesList.appendChild(li);
   });
 }
 
-// Upload a file
+// Handle file upload
 async function uploadFile() {
   const file = fileInput.files[0];
   if (!file) return;
