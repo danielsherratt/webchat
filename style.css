@@ -25,10 +25,11 @@ body {
 }
 
 #chat-container {
-  width: 100%;
-  height: 100%;
+  width: 90%;
+  height: 90%;
   display: flex;
   background: #fff;
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0,0,0,0.15);
 }
@@ -79,6 +80,7 @@ body {
   display: flex;
   flex-direction: column;
 }
+
 #chat-header {
   background: #00625f;
   color: #fff;
@@ -97,17 +99,12 @@ body {
   cursor: pointer;
 }
 
-/* Scrollable sections with sticky headings */
-#pinned-section,
-#messages-section,
-#shared-files {
+/* Pinned section: static */
+#pinned-section {
   padding: 0.5rem 1rem;
-  overflow-y: auto;
-  position: relative;
 }
-#pinned-section h3,
-#messages-section h3,
-#shared-files h3 {
+/* Sticky heading */
+#pinned-section h3 {
   position: sticky;
   top: 0;
   margin: 0;
@@ -116,8 +113,6 @@ body {
   z-index: 1;
   border-bottom: 1px solid #e0e0e0;
 }
-
-/* Pinned messages */
 #pinned-messages .message {
   background: #fffbea;
   border-left: 4px solid #00625f;
@@ -125,9 +120,24 @@ body {
   padding: 0.5rem;
 }
 
-/* Messages */
+/* Messages section: scrollable */
+#messages-section {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  overflow-y: auto;
+  position: relative;
+}
+#messages-section h3 {
+  position: sticky;
+  top: 0;
+  margin: 0;
+  padding: 0.5rem 0;
+  background: #fff;
+  z-index: 1;
+  border-bottom: 1px solid #e0e0e0;
+}
 #messages {
-  /* inner container, no overflow here */
+  /* this is just a container */
 }
 .message {
   padding: 0.5rem;
@@ -144,7 +154,21 @@ body {
   margin-left: 0.5rem;
 }
 
-/* Shared files */
+/* Shared files: static or separately scrollable if you like */
+#shared-files {
+  padding: 0.5rem 1rem;
+  overflow-y: auto;
+  position: relative;
+}
+#shared-files h3 {
+  position: sticky;
+  top: 0;
+  margin: 0;
+  padding: 0.5rem 0;
+  background: #fff;
+  z-index: 1;
+  border-bottom: 1px solid #e0e0e0;
+}
 .file-item {
   display: flex;
   align-items: center;
@@ -173,7 +197,7 @@ body {
   cursor: pointer;
 }
 
-/* Message input */
+/* Input */
 #message-input {
   display: flex;
   padding: 0.5rem 1rem;
