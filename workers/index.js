@@ -14,42 +14,34 @@ async function authenticate(c) {
   const auth = c.req.header('Authorization')
   if (!auth?.startsWith('Bearer ')) return null
   try {
-    const payload = jwt.verify(auth.slice(7), c.env.JWT_SECRET)
-    return payload
-  } catch { return null }
+    return jwt.verify(auth.slice(7), c.env.JWT_SECRET)
+  } catch {
+    return null
+  }
 }
 
-// --- DB schema (run once via D1 console) ---
-// CREATE TABLE users (
-//   id TEXT PRIMARY KEY,
-//   username TEXT UNIQUE,
-//   password_hash TEXT
-// );
-// CREATE TABLE messages (
-//   id TEXT PRIMARY KEY,
-//   user_id TEXT REFERENCES users(id),
-//   content TEXT,
-//   file_key TEXT,
-//   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-// );
-
-// Signup
+// --- Signup ---
 app.post('/api/signup', async c => {
   const { username, password } = await c.req.json()
+  if (!username || !password) {
+    return c.json({ error: 'Missing fields' }, 400)
+  }
   const hash = await bcrypt.hash(password, 10)
   const id = crypto.randomUUID()
   await c.env.DB.prepare(`
-    INSERT INTO users (id, username, password_hash) VALUES (?, ?, ?)
+    INSERT INTO users (id, username, password_hash)
+    VALUES (?, ?, ?)
   `).bind(id, username, hash).run()
   return c.json({ success: true })
 })
 
-// Login
+// --- Login ---
 app.post('/api/login', async c => {
   const { username, password } = await c.req.json()
-  const { results } = await c.env.DB.prepare(`
-    SELECT id, password_hash FROM users WHERE username = ?
-  `).bind(username).all()
+  const { results } = await c.env.DB
+    .prepare(`SELECT id, password_hash FROM users WHERE username = ?`)
+    .bind(username)
+    .all()
   if (!results.length) return c.json({ error: 'No such user' }, 401)
   const user = results[0]
   const ok = await bcrypt.compare(password, user.password_hash)
@@ -58,7 +50,7 @@ app.post('/api/login', async c => {
   return c.json({ token })
 })
 
-// Post a message (text + optional file)
+// --- Post a message ---
 app.post('/api/message', async c => {
   const user = await authenticate(c)
   if (!user) return c.json({ error: 'Unauthorized' }, 401)
@@ -82,16 +74,19 @@ app.post('/api/message', async c => {
   return c.json({ success: true })
 })
 
-// Fetch latest 100 messages
+// --- Fetch messages ---
 app.get('/api/messages', async c => {
-  const { results } = await c.env.DB.prepare(`
-    SELECT m.*, u.username 
-    FROM messages m JOIN users u ON u.id = m.user_id
-    ORDER BY m.created_at DESC
-    LIMIT 100
-  `).all()
-  // Map file URLs
-  const msgs = results.map(m => ({
+  const { results } = await c.env.DB
+    .prepare(`
+      SELECT m.id, u.username, m.content, m.file_key, m.created_at
+      FROM messages m
+      JOIN users u ON u.id = m.user_id
+      ORDER BY m.created_at DESC
+      LIMIT 100
+    `)
+    .all()
+
+  const msgs = await Promise.all(results.map(async m => ({
     id: m.id,
     username: m.username,
     content: m.content,
@@ -99,7 +94,8 @@ app.get('/api/messages', async c => {
       ? await c.env.FILES.get(m.file_key, { type: 'url' })
       : null,
     created_at: m.created_at
-  }))
+  })))
+
   return c.json(msgs)
 })
 
