@@ -111,3 +111,41 @@ button:hover {
 #message-input #send-btn {
   margin-left: 0.5rem;
 }
+
+
+#shared-files ul {
+  list-style: none;
+  padding: 0;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+.file-thumb,
+.file-icon {
+  width: 32px;
+  height: 32px;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+.file-thumb {
+  object-fit: cover;
+  border-radius: 4px;
+}
+.file-icon {
+  font-size: 1.5rem;
+  color: #00625f;
+}
+.file-name {
+  flex: 1;
+}
+.file-delete {
+  background: none;
+  border: none;
+  color: #c00;
+  font-size: 1.2rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
