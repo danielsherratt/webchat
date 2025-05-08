@@ -20,7 +20,7 @@ let userRole       = null;
 let userId         = null;
 let messageInterval;
 
-// Toggle UI
+// Helpers to toggle UI
 function showLogin() {
   loginContainer.style.display = 'block';
   chatContainer.style.display  = 'none';
@@ -30,7 +30,7 @@ function showChat() {
   chatContainer.style.display  = 'block';
 }
 
-// Build channel selector
+// Build channel selector based on role
 async function renderChannelSelector() {
   channelSelector.innerHTML = '';
 
@@ -90,7 +90,7 @@ function setChannel(channel) {
   loadFiles();
 }
 
-// 1) Auth check
+// 1) Check auth
 async function checkAuth() {
   try {
     const res = await fetch('/api/auth', { credentials: 'include' });
@@ -122,14 +122,14 @@ function startChat() {
   }, 1000);
 }
 
-// 3) Login form
+// 3) Login form handler
 loginForm.onsubmit = async e => {
   e.preventDefault();
   const res = await fetch('/api/login', {
-    method:    'POST',
+    method:     'POST',
     credentials:'include',
-    headers:   { 'Content-Type': 'application/json' },
-    body:      JSON.stringify({
+    headers:    { 'Content-Type': 'application/json' },
+    body:       JSON.stringify({
       username: document.getElementById('username').value,
       password: document.getElementById('password').value
     })
@@ -145,7 +145,7 @@ logoutBtn.onclick = async () => {
   if (messageInterval) clearInterval(messageInterval);
 };
 
-// Enter & Ctrl+Enter behavior
+// Enter=send, Ctrl+Enter=new line
 messageText.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.ctrlKey) {
     e.preventDefault();
@@ -158,15 +158,14 @@ sendBtn.onclick   = sendMessage;
 uploadBtn.onclick = () => fileInput.click();
 fileInput.onchange = uploadFile;
 
-// Load messages
+// Load messages (oldest at top, newest at bottom)
 async function loadMessages() {
   try {
     const res = await fetch(`/api/messages?channel=${currentChannel}`, {
       credentials: 'include'
     });
     if (!res.ok) return;
-    let data = await res.json();
-    data = data.reverse(); // newest first
+    const data = await res.json(); // no reverse()
 
     pinnedContainer.innerHTML = '';
     messagesDiv.innerHTML     = '';
@@ -196,12 +195,15 @@ async function loadMessages() {
       if (msg.pinned) pinnedContainer.appendChild(div);
       else             messagesDiv.appendChild(div);
     });
+
+    // auto-scroll to bottom
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
   } catch (e) {
     console.error('loadMessages error', e);
   }
 }
 
-// Send a message
+// Send a chat message
 async function sendMessage() {
   const content = messageText.value.trim();
   if (!content) return;
@@ -209,7 +211,7 @@ async function sendMessage() {
     method:     'POST',
     credentials:'include',
     headers:    { 'Content-Type':'application/json' },
-    body:       JSON.stringify({ content, channel: currentChannel })
+    body:       JSON.stringify({ content, channel:currentChannel })
   });
   messageText.value = '';
   loadMessages();
@@ -235,10 +237,9 @@ async function deleteMessage(id) {
   loadMessages();
 }
 
-// Load files **only from this channel** by parsing messages
+// Load shared files based on current channel
 async function loadFiles() {
   try {
-    // pull messages for current channel
     const res = await fetch(`/api/messages?channel=${currentChannel}`, {
       credentials: 'include'
     });
@@ -246,7 +247,6 @@ async function loadFiles() {
     const data = await res.json();
     filesList.innerHTML = '';
 
-    // find file links in each message
     data.forEach(msg => {
       const match = msg.content.match(
         /<a href="([^"]+)" target="_blank">([^<]+)<\/a>/
@@ -257,11 +257,9 @@ async function loadFiles() {
       const key = decodeURIComponent(url.split('/').pop());
       const ext = filename.split('.').pop().toLowerCase();
 
-      // build list item
       const li = document.createElement('li');
       li.className = 'file-item';
 
-      // thumbnail or icon
       let thumb;
       if (['png','jpg','jpeg','gif','webp'].includes(ext)) {
         thumb = document.createElement('img');
@@ -282,13 +280,11 @@ async function loadFiles() {
       }
       li.appendChild(thumb);
 
-      // filename link
       const nameSpan = document.createElement('span');
       nameSpan.className = 'file-name';
       nameSpan.innerHTML = `<a href="${url}" target="_blank">${filename}</a>`;
       li.appendChild(nameSpan);
 
-      // delete only for admins
       if (userRole === 'admin') {
         const delBtn = document.createElement('button');
         delBtn.className = 'file-delete';
@@ -329,7 +325,6 @@ async function uploadFile() {
   }
   const { filename, url } = await res.json();
 
-  // then post a chat message linking to it
   await fetch('/api/messages', {
     method:     'POST',
     credentials:'include',
@@ -342,7 +337,8 @@ async function uploadFile() {
 
   fileInput.value = '';
   loadFiles();
+  loadMessages();
 }
 
-// initialize
+// Initialize
 checkAuth();
