@@ -1,11 +1,13 @@
+// cesw_hub/admin.js
+
 const userForm = document.getElementById('user-form');
-const usersList = document.getElementById('users-list');
+const usersTableBody = document.querySelector('#users-table tbody');
 const deleteAllBtn = document.getElementById('delete-all');
 const logoutBtn = document.getElementById('logout-btn');
 
 logoutBtn.onclick = async () => {
-  await fetch('/api/logout', { method: 'POST' });
-  location.href = '/';
+  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  window.location.href = '/';
 };
 
 userForm.onsubmit = async e => {
@@ -16,45 +18,54 @@ userForm.onsubmit = async e => {
   const role = document.getElementById('new-role').value;
   const method = id ? 'PUT' : 'POST';
   const url = '/api/users' + (id ? `?id=${id}` : '');
-  const res = await fetch(url, {
+  await fetch(url, {
     method,
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password, role })
   });
-  if (res.ok) {
-    loadUsers();
-    userForm.reset();
-  }
+  loadUsers();
+  userForm.reset();
 };
 
 deleteAllBtn.onclick = async () => {
-  await fetch('/api/messages?all=true', { method: 'DELETE' });
+  if (!confirm('Are you sure you want to delete ALL messages?')) return;
+  await fetch('/api/messages?all=true', {
+    method: 'DELETE',
+    credentials: 'include'
+  });
   alert('All messages deleted.');
 };
 
 async function loadUsers() {
-  const res = await fetch('/api/users');
+  const res = await fetch('/api/users', { credentials: 'include' });
+  if (!res.ok) return window.location.href = '/';
   const data = await res.json();
-  usersList.innerHTML = '';
+  usersTableBody.innerHTML = '';
   data.forEach(u => {
-    const li = document.createElement('li');
-    li.textContent = `${u.username} (${u.role})`;
-    const editBtn = document.createElement('button');
-    editBtn.textContent = 'Edit';
-    editBtn.onclick = () => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${u.username}</td>
+      <td>${u.role}</td>
+      <td class="action-btns">
+        <button class="edit-btn">Edit</button>
+        <button class="del-btn">Delete</button>
+      </td>
+    `;
+    tr.querySelector('.edit-btn').onclick = () => {
       document.getElementById('user-id').value = u.id;
       document.getElementById('new-username').value = u.username;
       document.getElementById('new-role').value = u.role;
     };
-    const delBtn = document.createElement('button');
-    delBtn.textContent = 'Delete';
-    delBtn.onclick = async () => {
-      await fetch(`/api/users?id=${u.id}`, { method: 'DELETE' });
+    tr.querySelector('.del-btn').onclick = async () => {
+      if (!confirm(`Delete user ${u.username}?`)) return;
+      await fetch(`/api/users?id=${u.id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
       loadUsers();
     };
-    li.appendChild(editBtn);
-    li.appendChild(delBtn);
-    usersList.appendChild(li);
+    usersTableBody.appendChild(tr);
   });
 }
 

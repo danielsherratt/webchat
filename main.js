@@ -1,6 +1,4 @@
-// ──────────────────────────────────────────────────────────────────────────────
 // File: cesw_hub/main.js
-// ──────────────────────────────────────────────────────────────────────────────
 
 const loginContainer = document.getElementById('login-container');
 const chatContainer = document.getElementById('chat-container');
@@ -17,6 +15,22 @@ const channelButtons = document.querySelectorAll('#channel-selector button');
 let currentChannel = 'everyone';
 let userRole = null;
 
+// Check session on page load
+(async function checkAuth() {
+  const res = await fetch('/api/auth', { credentials: 'include' });
+  if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+    const userData = await res.json();
+    userRole = userData.role;
+    loginContainer.style.display = 'none';
+    chatContainer.style.display = 'block';
+    if (userRole === 'admin') uploadBtn.style.display = 'inline-block';
+    loadMessages();
+    loadFiles();
+    setInterval(loadMessages, 1000);
+  }
+})();
+
+// Sign-in form
 loginForm.onsubmit = async e => {
   e.preventDefault();
   const res = await fetch('/api/login', {
@@ -28,20 +42,17 @@ loginForm.onsubmit = async e => {
       password: document.getElementById('password').value
     })
   });
-  if (res.ok) {
-    loginContainer.style.display = 'none';
-    chatContainer.style.display = 'block';
-    initChat();
-  } else {
-    alert('Login failed');
-  }
+  if (res.ok) return checkAuth();
+  alert('Login failed');
 };
 
+// Logout
 logoutBtn.onclick = async () => {
   await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  location.reload();
+  window.location.reload();
 };
 
+// Channel selector
 channelButtons.forEach(btn => {
   btn.onclick = () => {
     channelButtons.forEach(b => b.classList.remove('active'));
@@ -51,6 +62,7 @@ channelButtons.forEach(btn => {
   };
 });
 
+// Enter=send, Ctrl+Enter=new line
 messageText.onkeydown = e => {
   if (e.key === 'Enter' && !e.ctrlKey) {
     e.preventDefault();
@@ -64,30 +76,13 @@ sendBtn.onclick = sendMessage;
 uploadBtn.onclick = () => fileInput.click();
 fileInput.onchange = uploadFile;
 
-async function initChat() {
-  const userRes = await fetch('/api/auth', { credentials: 'include' });
-  if (!userRes.ok) return location.reload();
-  const ct = userRes.headers.get('content-type') || '';
-  if (!ct.includes('application/json')) return location.reload();
-  let userData;
-  try { userData = await userRes.json(); }
-  catch { return location.reload(); }
-  userRole = userData.role;
-  if (userRole === 'admin') uploadBtn.style.display = 'inline-block';
-  loadMessages();
-  loadFiles();
-  setInterval(loadMessages, 1000);
-}
-
+// Load messages
 async function loadMessages() {
   const res = await fetch(`/api/messages?channel=${currentChannel}`, {
     credentials: 'include'
   });
   if (!res.ok) return;
-  const ct = res.headers.get('content-type') || '';
-  if (!ct.includes('application/json')) { location.reload(); return; }
-  let data;
-  try { data = await res.json(); } catch { return; }
+  const data = await res.json();
   messagesDiv.innerHTML = '';
   data.forEach(msg => {
     const div = document.createElement('div');
@@ -95,7 +90,7 @@ async function loadMessages() {
     div.innerHTML = `
       <span class="meta">[${new Date(msg.timestamp)
         .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}] 
-      ${msg.username}:</span> <span>${msg.content}</span>`;
+        ${msg.username}:</span> ${msg.content}`;
     if (userRole === 'admin') {
       const pinBtn = document.createElement('button');
       pinBtn.className = 'pin-btn';
@@ -112,6 +107,7 @@ async function loadMessages() {
   });
 }
 
+// Send a new message
 async function sendMessage() {
   const content = messageText.value.trim();
   if (!content) return;
@@ -125,16 +121,19 @@ async function sendMessage() {
   loadMessages();
 }
 
+// Pin or unpin
 async function togglePin(id, pinned) {
-  await fetch('/api/messages/pin', {
+  const res = await fetch('/api/messages/pin', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, pinned })
   });
+  if (!res.ok) alert('Pin failed');
   loadMessages();
 }
 
+// Delete a message
 async function deleteMessage(id) {
   await fetch(`/api/messages?id=${id}`, {
     method: 'DELETE',
@@ -143,13 +142,11 @@ async function deleteMessage(id) {
   loadMessages();
 }
 
+// Load shared files list
 async function loadFiles() {
   const res = await fetch('/api/files', { credentials: 'include' });
   if (!res.ok) return;
-  const ct = res.headers.get('content-type') || '';
-  if (!ct.includes('application/json')) return;
-  let data;
-  try { data = await res.json(); } catch { return; }
+  const data = await res.json();
   filesList.innerHTML = '';
   data.forEach(f => {
     const li = document.createElement('li');
@@ -161,13 +158,17 @@ async function loadFiles() {
   });
 }
 
+// Upload a file
 async function uploadFile() {
+  const file = fileInput.files[0];
+  if (!file) return;
   const form = new FormData();
-  form.append('file', fileInput.files[0]);
-  await fetch('/api/upload', {
+  form.append('file', file);
+  const res = await fetch('/api/upload', {
     method: 'POST',
     credentials: 'include',
     body: form
   });
+  if (!res.ok) return alert('Upload failed');
   loadFiles();
 }

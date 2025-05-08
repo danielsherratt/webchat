@@ -1,26 +1,20 @@
 // File: cesw_hub/functions/api/upload.js
 
 export async function onRequestPost({ request, env }) {
-  // authenticate & authorize
+  // Authenticate & authorize
   const cookie = request.headers.get('Cookie') || '';
-  const token = cookie
-    .split('; ')
-    .find(c => c.startsWith('token='))
-    ?.split('=')[1];
+  const token = cookie.split('; ').find(c => c.startsWith('token='))?.split('=')[1];
   const session = await env.D1_CESW
     .prepare('SELECT user_id FROM sessions WHERE token = ?')
     .bind(token)
     .first();
-  const user = session &&
-    (await env.D1_CESW
-      .prepare('SELECT role FROM users WHERE id = ?')
-      .bind(session.user_id)
-      .first());
-  if (!user || user.role !== 'admin') {
-    return new Response(null, { status: 403 });
-  }
+  const user = session && await env.D1_CESW
+    .prepare('SELECT role FROM users WHERE id = ?')
+    .bind(session.user_id)
+    .first();
+  if (!user || user.role !== 'admin') return new Response(null, { status: 403 });
 
-  // handle upload
+  // Handle upload
   const form = await request.formData();
   const file = form.get('file');
   const data = await file.arrayBuffer();
@@ -28,12 +22,17 @@ export async function onRequestPost({ request, env }) {
     .prepare('INSERT INTO files (filename, mime, data) VALUES (?, ?, ?)')
     .bind(file.name, file.type, new Uint8Array(data))
     .run();
-  return new Response(null, { status: 201 });
+
+  return new Response(JSON.stringify({ message: 'File uploaded' }), {
+    status: 201,
+    headers: { 'Content-Type': 'application/json' }
+  });
 }
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const id = url.searchParams.get('id');
+
   if (id) {
     const res = await env.D1_CESW
       .prepare('SELECT filename, mime, data FROM files WHERE id = ?')
@@ -49,7 +48,7 @@ export async function onRequestGet({ request, env }) {
     });
   }
 
-  // list all files
+  // List all files
   const all = await env.D1_CESW
     .prepare('SELECT id, filename, timestamp FROM files ORDER BY timestamp DESC')
     .all();
