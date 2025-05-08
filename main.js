@@ -94,7 +94,8 @@ async function loadChannels() {
   channelList.innerHTML = '';
   for (const ch of sorted) {
     const li = document.createElement('li');
-    li.textContent = ch.label;
+    // append '*' if last author was a member
+    li.textContent = ch.label + (ch.author === 'member' ? ' *' : '');
     li.dataset.channel = ch.key;
     if (ch.key === currentChannel) li.classList.add('active');
     if (ch.author === 'member') li.classList.add('bold');
@@ -156,7 +157,6 @@ messageText.onkeydown = e => {
     messageText.value+='\n';
   }
 };
-
 sendBtn.onclick = sendMessage;
 uploadBtn.onclick = ()=>fileInput.click();
 fileInput.onchange = uploadFile;
@@ -217,7 +217,7 @@ async function deleteMessage(id) {
   loadMessages();
 }
 
-// load files per channel (parses messages)
+// load files per channel
 async function loadFiles() {
   const res = await fetch(`/api/messages?channel=${currentChannel}`,{credentials:'include'});
   if(!res.ok)return;
@@ -270,10 +270,10 @@ async function uploadFile() {
   const fm=new FormData();fm.append('file',f);
   const r=await fetch('/api/upload',{method:'POST',credentials:'include',body:fm});
   if(!r.ok){const e=await r.json().catch(()=>({})); return alert('Upload failed: '+(e.error||r.status));}
-  const {filename:url}=await r.json(),{filename:fn,url:u}=await r.json();
+  const { filename, url } = await r.json();
   await fetch('/api/messages',{method:'POST',credentials:'include',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({content:`<a href="${u}" target="_blank">${fn}</a>`,channel:currentChannel})
+    body:JSON.stringify({content:`<a href="${url}" target="_blank">${filename}</a>`,channel:currentChannel})
   });
   fileInput.value=''; loadFiles(); loadMessages();
 }
