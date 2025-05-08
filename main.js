@@ -1,46 +1,44 @@
 // File: cesw_hub/main.js
 
-const loginContainer = document.getElementById('login-container');
-const chatContainer = document.getElementById('chat-container');
-const loginForm      = document.getElementById('login-form');
-const logoutBtn      = document.getElementById('logout-btn');
-const messagesDiv    = document.getElementById('messages');
-const messageText    = document.getElementById('message-text');
-const sendBtn        = document.getElementById('send-btn');
-const fileInput      = document.getElementById('file-input');
-const uploadBtn      = document.getElementById('upload-btn');
-const filesList      = document.getElementById('files-list');
-const channelButtons = document.querySelectorAll('#channel-selector button');
+const loginContainer  = document.getElementById('login-container');
+const chatContainer   = document.getElementById('chat-container');
+const loginForm       = document.getElementById('login-form');
+const logoutBtn       = document.getElementById('logout-btn');
+const pinnedContainer = document.getElementById('pinned-messages');
+const messagesDiv     = document.getElementById('messages');
+const messageText     = document.getElementById('message-text');
+const sendBtn         = document.getElementById('send-btn');
+const fileInput       = document.getElementById('file-input');
+const uploadBtn       = document.getElementById('upload-btn');
+const filesList       = document.getElementById('files-list');
+const channelButtons  = document.querySelectorAll('#channel-selector button');
 
 let currentChannel = 'everyone';
 let userRole       = null;
 
-// 1) Define checkAuth as a global function
+// 1) Auth check function
 async function checkAuth() {
   const res = await fetch('/api/auth', { credentials: 'include' });
   if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
-    // logged in
     const { role } = await res.json();
     userRole = role;
     loginContainer.style.display = 'none';
     chatContainer.style.display  = 'block';
-    if (userRole === 'admin') uploadBtn.style.display = 'inline-block';
+    if (role === 'admin') uploadBtn.style.display = 'inline-block';
 
-    // start polling
     loadMessages();
     loadFiles();
     setInterval(loadMessages, 1000);
   } else {
-    // not logged in
     loginContainer.style.display = 'block';
     chatContainer.style.display  = 'none';
   }
 }
 
-// 2) Run it once on page load
+// 2) Run on load
 checkAuth();
 
-// 3) Wire up the login form to call checkAuth() again
+// 3) Login form
 loginForm.onsubmit = async e => {
   e.preventDefault();
   const res = await fetch('/api/login', {
@@ -52,10 +50,7 @@ loginForm.onsubmit = async e => {
       password: document.getElementById('password').value
     })
   });
-  if (res.ok) {
-    // re-check auth state
-    return checkAuth();
-  }
+  if (res.ok) return checkAuth();
   alert('Login failed');
 };
 
@@ -65,7 +60,7 @@ logoutBtn.onclick = async () => {
   window.location.reload();
 };
 
-// Channel selector buttons
+// Channel buttons
 channelButtons.forEach(btn => {
   btn.onclick = () => {
     channelButtons.forEach(b => b.classList.remove('active'));
@@ -75,7 +70,7 @@ channelButtons.forEach(btn => {
   };
 });
 
-// Enter=send, Ctrl+Enter=new line
+// Enter/ Ctrl+Enter behavior
 messageText.onkeydown = e => {
   if (e.key === 'Enter' && !e.ctrlKey) {
     e.preventDefault();
@@ -87,23 +82,28 @@ messageText.onkeydown = e => {
 
 sendBtn.onclick  = sendMessage;
 uploadBtn.onclick = () => fileInput.click();
-fileInput.onchange  = uploadFile;
+fileInput.onchange = uploadFile;
 
-// Load messages from the current channel
+// Load messages (separate pinned)
 async function loadMessages() {
   const res = await fetch(`/api/messages?channel=${currentChannel}`, {
     credentials: 'include'
   });
   if (!res.ok) return;
   const data = await res.json();
-  messagesDiv.innerHTML = '';
+
+  pinnedContainer.innerHTML = '';
+  messagesDiv.innerHTML     = '';
+
   data.forEach(msg => {
     const div = document.createElement('div');
     div.className = 'message';
     div.innerHTML = `
       <span class="meta">[${new Date(msg.timestamp)
         .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}]
-        ${msg.username}:</span> ${msg.content}`;
+      ${msg.username}:</span> ${msg.content}
+    `;
+
     if (userRole === 'admin') {
       const pinBtn = document.createElement('button');
       pinBtn.className = 'pin-btn';
@@ -117,11 +117,13 @@ async function loadMessages() {
       delBtn.onclick = () => deleteMessage(msg.id);
       div.appendChild(delBtn);
     }
-    messagesDiv.appendChild(div);
+
+    if (msg.pinned) pinnedContainer.appendChild(div);
+    else             messagesDiv.appendChild(div);
   });
 }
 
-// Send a new chat message
+// Send message
 async function sendMessage() {
   const content = messageText.value.trim();
   if (!content) return;
@@ -135,7 +137,7 @@ async function sendMessage() {
   loadMessages();
 }
 
-// Pin/unpin action
+// Pin/unpin
 async function togglePin(id, pinned) {
   const res = await fetch('/api/messages/pin', {
     method: 'POST',
@@ -147,7 +149,7 @@ async function togglePin(id, pinned) {
   loadMessages();
 }
 
-// Delete a message
+// Delete message
 async function deleteMessage(id) {
   await fetch(`/api/messages?id=${id}`, {
     method: 'DELETE',
@@ -156,7 +158,7 @@ async function deleteMessage(id) {
   loadMessages();
 }
 
-// Load the shared files list
+// Load files
 async function loadFiles() {
   const res = await fetch('/api/files', { credentials: 'include' });
   if (!res.ok) return;
@@ -167,12 +169,13 @@ async function loadFiles() {
     li.innerHTML = `
       <a href="/api/files?id=${f.id}">${f.filename}</a>
       [${new Date(f.timestamp)
-        .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}]`;
+        .toLocaleString('en-NZ',{timeZone:'Pacific/Auckland'})}]
+    `;
     filesList.appendChild(li);
   });
 }
 
-// Handle file upload
+// Upload file
 async function uploadFile() {
   const file = fileInput.files[0];
   if (!file) return;

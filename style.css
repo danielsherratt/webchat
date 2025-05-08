@@ -1,3 +1,4 @@
+/* File: cesw_hub/style.css */
 @import url('https://fonts.googleapis.com/css2?family=Work+Sans&display=swap');
 
 body {
@@ -6,17 +7,24 @@ body {
   margin: 0;
   padding: 0;
 }
-#login-container, #chat-container {
-  max-width: 600px;
+
+/* Widen the containers */
+#login-container,
+#chat-container {
+  max-width: 800px;
+  width: 90%;
   margin: 2rem auto;
   background: #fff;
   padding: 1.5rem;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
-#login-container h1, #chat-header h2 {
+
+#login-container h1,
+#chat-header h2 {
   color: #00625f;
 }
+
 button {
   background: #00625f;
   color: #fff;
@@ -28,6 +36,7 @@ button {
 button:hover {
   background: #003541;
 }
+
 #channel-selector button {
   background: transparent;
   color: #00625f;
@@ -38,25 +47,48 @@ button:hover {
   background: #00625f;
   color: #fff;
 }
+
+#pinned-section {
+  margin-bottom: 1rem;
+}
+#pinned-section h3,
+#messages-section h3,
+#shared-files h3 {
+  margin: 0.5rem 0;
+  color: #00625f;
+}
+
+#pinned-messages .message {
+  background: #fffbea;
+  border-left: 4px solid #00625f;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+}
+
 #messages {
   max-height: 300px;
   overflow-y: auto;
-  margin: 1rem 0;
+  margin: 0.5rem 0;
 }
+
 .message {
   padding: 0.5rem;
   border-bottom: 1px solid #e0e0e0;
 }
+
 .message .meta {
   font-size: 0.8rem;
   color: #666;
 }
-.pin-btn, .delete-btn {
-  background: #00625f;
-  border: #00625f;
+
+.pin-btn,
+.delete-btn {
+  background: none;
+  border: none;
   cursor: pointer;
   margin-left: 0.5rem;
 }
+
 #shared-files ul {
   list-style: none;
   padding: 0;
@@ -64,9 +96,11 @@ button:hover {
 #shared-files li {
   margin: 0.5rem 0;
 }
+
 #message-input {
   display: flex;
   align-items: center;
+  margin-top: 1rem;
 }
 #message-input textarea {
   flex: 1;
