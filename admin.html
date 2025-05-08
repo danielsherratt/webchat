@@ -1,33 +1,56 @@
+<!-- cesw_hub/admin.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CESW Hub Admin</title>
+  <title>CESW Hub — Admin</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans&display=swap" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-pb3R5N8j+vGv2Om+Sg6L/JWQ1CLxOrvDwOxg4bO6XsfZQnF8vtr+r1z3L07W/a/r0TcuB/9B+KXj3tDkXNTaTA=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
   <link rel="stylesheet" href="/style.css" />
   <script defer src="/admin.js"></script>
 </head>
 <body>
-  <h1>Admin Section</h1>
-  <button id="logout-btn">Logout</button>
-  <section id="user-management">
-    <h2>Users</h2>
-    <form id="user-form">
-      <input type="hidden" id="user-id" />
-      <input type="text" id="new-username" placeholder="Username" required />
-      <input type="password" id="new-password" placeholder="Password" required />
-      <select id="new-role">
-        <option value="member">Member</option>
-        <option value="admin">Admin</option>
-      </select>
-      <button type="submit">Create / Update User</button>
-    </form>
-    <ul id="users-list"></ul>
-  </section>
-  <section id="message-management">
-    <h2>Messages</h2>
-    <button id="delete-all">Delete All Messages</button>
-  </section>
+  <div id="chat-container">
+    <aside id="sidebar">
+      <div id="logo">
+        <img src="/logo.png" alt="CESW Hub Logo" />
+        <span class="logo-text">CESW Hub</span>
+      </div>
+      <div id="user-info"></div>
+      <button id="logout-btn" style="margin-top:1rem; background:#f44336; border:none; color:#fff; padding:0.5rem 1rem; border-radius:4px; cursor:pointer;">
+        <i class="fas fa-sign-out-alt"></i> Logout
+      </button>
+    </aside>
+
+    <section id="chat-main">
+      <header id="chat-header">
+        <h2>Admin Panel</h2>
+      </header>
+
+      <div id="admin-content" style="padding:1rem; flex:1; overflow:auto;">
+        <h3>All Users</h3>
+        <table id="users-table" style="width:100%; border-collapse: collapse; margin-top:0.5rem;">
+          <thead>
+            <tr>
+              <th style="border-bottom:1px solid #ccc; padding:0.5rem; text-align:left;">Username</th>
+              <th style="border-bottom:1px solid #ccc; padding:0.5rem; text-align:left;">Role</th>
+              <th style="border-bottom:1px solid #ccc; padding:0.5rem; text-align:left;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- filled by admin.js -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
 </body>
 </html>

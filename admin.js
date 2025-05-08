@@ -1,72 +1,71 @@
 // cesw_hub/admin.js
 
-const userForm = document.getElementById('user-form');
-const usersTableBody = document.querySelector('#users-table tbody');
-const deleteAllBtn = document.getElementById('delete-all');
-const logoutBtn = document.getElementById('logout-btn');
+const userInfoDiv = document.getElementById('user-info');
+const logoutBtn   = document.getElementById('logout-btn');
+const tbody       = document.querySelector('#users-table tbody');
 
-logoutBtn.onclick = async () => {
-  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  window.location.href = '/';
-};
-
-userForm.onsubmit = async e => {
-  e.preventDefault();
-  const id = document.getElementById('user-id').value;
-  const username = document.getElementById('new-username').value;
-  const password = document.getElementById('new-password').value;
-  const role = document.getElementById('new-role').value;
-  const method = id ? 'PUT' : 'POST';
-  const url = '/api/users' + (id ? `?id=${id}` : '');
-  await fetch(url, {
-    method,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password, role })
-  });
+async function init() {
+  // Check auth & role
+  const auth = await fetch('/api/auth', { credentials: 'include' });
+  if (auth.status !== 200) return window.location = '/';
+  const { username, role } = await auth.json();
+  if (role !== 'admin') return window.location = '/';
+  userInfoDiv.textContent = `Hello, ${username}`;
   loadUsers();
-  userForm.reset();
-};
-
-deleteAllBtn.onclick = async () => {
-  if (!confirm('Are you sure you want to delete ALL messages?')) return;
-  await fetch('/api/messages?all=true', {
-    method: 'DELETE',
-    credentials: 'include'
-  });
-  alert('All messages deleted.');
-};
+}
 
 async function loadUsers() {
   const res = await fetch('/api/users', { credentials: 'include' });
-  if (!res.ok) return window.location.href = '/';
-  const data = await res.json();
-  usersTableBody.innerHTML = '';
-  data.forEach(u => {
+  if (!res.ok) return alert('Failed to load users');
+  const users = await res.json();
+  tbody.innerHTML = '';
+  users.forEach(u => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${u.username}</td>
-      <td>${u.role}</td>
-      <td class="action-btns">
-        <button class="edit-btn">Edit</button>
-        <button class="del-btn">Delete</button>
-      </td>
-    `;
-    tr.querySelector('.edit-btn').onclick = () => {
-      document.getElementById('user-id').value = u.id;
-      document.getElementById('new-username').value = u.username;
-      document.getElementById('new-role').value = u.role;
+      <td style="padding:0.5rem; border-bottom:1px solid #eee;">${u.username}</td>
+      <td style="padding:0.5rem; border-bottom:1px solid #eee;">${u.role}</td>
+      <td style="padding:0.5rem; border-bottom:1px solid #eee;">
+        <button class="edit-btn" data-id="${u.id}" style="margin-right:0.5rem;">Edit</button>
+        <button class="delete-btn" data-id="${u.id}">Delete</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  attachUserActions();
+}
+
+function attachUserActions() {
+  document.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      const pw = prompt('Enter new password for user ID ' + id + ':');
+      if (!pw) return;
+      const r = await fetch('/api/users', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, password: pw })
+      });
+      if (r.ok) loadUsers();
+      else alert('Failed to update password');
     };
-    tr.querySelector('.del-btn').onclick = async () => {
-      if (!confirm(`Delete user ${u.username}?`)) return;
-      await fetch(`/api/users?id=${u.id}`, {
+  });
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      if (!confirm('Delete user ID ' + id + '?')) return;
+      const r = await fetch(`/api/users?id=${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
-      loadUsers();
+      if (r.ok) loadUsers();
+      else alert('Failed to delete user');
     };
-    usersTableBody.appendChild(tr);
   });
 }
 
-loadUsers();
+logoutBtn.onclick = async () => {
+  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  window.location = '/';
+};
+
+document.addEventListener('DOMContentLoaded', init);
