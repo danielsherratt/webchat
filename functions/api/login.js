@@ -1,4 +1,4 @@
-// cesw_hub/functions/api/login.js
+// File: cesw_hub/functions/api/login.js
 
 export async function onRequestPost({ request, env }) {
   const { username, password } = await request.json();
@@ -25,7 +25,6 @@ export async function onRequestPost({ request, env }) {
     'Set-Cookie',
     [
       `token=${token}`,
-      'Domain=webchat.danieltesting.space',
       'Path=/',
       'HttpOnly',
       'Secure',

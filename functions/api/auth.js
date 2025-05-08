@@ -7,7 +7,10 @@ export async function onRequestGet({ request, env }) {
     .find(c => c.startsWith('token='))
     ?.split('=')[1];
   if (!token) {
-    return new Response(null, { status: 401 });
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   const session = await env.D1_CESW
@@ -15,7 +18,10 @@ export async function onRequestGet({ request, env }) {
     .bind(token)
     .first();
   if (!session) {
-    return new Response(null, { status: 401 });
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   const userRes = await env.D1_CESW
@@ -23,7 +29,10 @@ export async function onRequestGet({ request, env }) {
     .bind(session.user_id)
     .first();
   if (!userRes) {
-    return new Response(null, { status: 401 });
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   return new Response(
@@ -32,9 +41,6 @@ export async function onRequestGet({ request, env }) {
       username: userRes.username,
       role: userRes.role
     }),
-    {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    }
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
   );
 }

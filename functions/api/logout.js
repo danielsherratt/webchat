@@ -1,4 +1,4 @@
-// cesw_hub/functions/api/logout.js
+// File: cesw_hub/functions/api/logout.js
 
 export async function onRequestPost({ request, env }) {
   const cookie = request.headers.get('Cookie') || '';
@@ -15,7 +15,6 @@ export async function onRequestPost({ request, env }) {
     'Set-Cookie',
     [
       'token=',
-      'Domain=webchat.danieltesting.space',
       'Path=/',
       'HttpOnly',
       'Secure',
