@@ -1,9 +1,9 @@
 // cesw_hub/main.js
 
-// Determine time zone, fallback to Auckland
-const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Pacific/Auckland';
+// We'll always display times in NZST
+const NZ_TIMEZONE = 'Pacific/Auckland';
 
-// Elements
+// --- Element references ---
 const loginContainer   = document.getElementById('login-container');
 const chatContainer    = document.getElementById('chat-container');
 const loginForm        = document.getElementById('login-form');
@@ -15,7 +15,6 @@ const pinnedContainer  = document.getElementById('pinned-messages');
 const messagesSection  = document.getElementById('messages-section');
 const messagesDiv      = document.getElementById('messages');
 const filesList        = document.getElementById('files-list');
-const filesSection     = document.getElementById('shared-files');
 const messageText      = document.getElementById('message-text');
 const sendBtn          = document.getElementById('send-btn');
 const fileInput        = document.getElementById('file-input');
@@ -23,32 +22,26 @@ const uploadBtn        = document.getElementById('upload-btn');
 
 let userRole, userId;
 let currentChannel = 'everyone';
-let messageInterval;
+let pollInterval;
 
-// Track first-load auto-scroll per channel
-const initialScrolled = {};
+// Track whether we’ve auto‐scrolled each channel yet
+const hasAutoScrolled = {};
 
-// Show/hide helpers
-const showLogin = () => {
+// --- UI helpers ---
+function showLogin() {
   loginContainer.style.display = 'block';
   chatContainer.style.display  = 'none';
-};
-const showChat  = () => {
+}
+function showChat() {
   loginContainer.style.display = 'none';
   chatContainer.style.display  = 'flex';
-};
-
-// Simple greeting
-function getGreeting() {
+}
+function greet() {
   const h = new Date().getHours();
-  return h < 12
-    ? 'Good morning'
-    : h < 18
-      ? 'Good afternoon'
-      : 'Good evening';
+  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
 }
 
-// 1) Check auth
+// --- 1) Check auth & initialize ---
 async function checkAuth() {
   try {
     const res = await fetch('/api/auth', { credentials: 'include' });
@@ -56,47 +49,47 @@ async function checkAuth() {
       const { username, role, id } = await res.json();
       userRole = role;
       userId   = id;
-      userInfoDiv.textContent = `${getGreeting()}, ${username}`;
-      showChat();
+      userInfoDiv.textContent = `${greet()}, ${username}`;
       if (role === 'admin') uploadBtn.style.display = 'inline-block';
+      showChat();
       await loadChannels();
       startPolling();
       return;
     }
   } catch (e) {
-    console.error('checkAuth error', e);
+    console.error(e);
   }
   showLogin();
 }
 
-// 2) Build sidebar channels
+// --- 2) Build sidebar ---
 async function loadChannels() {
   const channels = [];
 
   // Everyone
-  let msgs = await fetch(`/api/messages?channel=everyone`, { credentials:'include' }).then(r=>r.json());
+  let msgs = await fetch(`/api/messages?channel=everyone`, { credentials: 'include' }).then(r => r.json());
   let last = msgs[msgs.length - 1];
   channels.push({ key:'everyone', label:'Everyone', ts:last?.timestamp||0, author:last?.authorRole||null });
 
-  // Private
+  // Private chats
   if (userRole === 'member') {
     const key = `private-${userId}`;
-    msgs = await fetch(`/api/messages?channel=${key}`, { credentials:'include' }).then(r=>r.json());
+    msgs = await fetch(`/api/messages?channel=${key}`, { credentials: 'include' }).then(r => r.json());
     last = msgs[msgs.length - 1];
     channels.push({ key, label:'Admin', ts:last?.timestamp||0, author:last?.authorRole||null });
   } else {
-    const users = await fetch('/api/users', { credentials:'include' }).then(r=>r.json());
+    const users = await fetch('/api/users', { credentials: 'include' }).then(r => r.json());
     for (const u of users.filter(u=>u.role==='member')) {
       const key = `private-${u.id}`;
-      msgs = await fetch(`/api/messages?channel=${key}`, { credentials:'include' }).then(r=>r.json());
+      msgs = await fetch(`/api/messages?channel=${key}`, { credentials: 'include' }).then(r => r.json());
       last = msgs[msgs.length - 1];
       channels.push({ key, label:u.username, ts:last?.timestamp||0, author:last?.authorRole||null });
     }
   }
 
-  // Sort by newest, keep Everyone at top
+  // Sort by most recent, but keep Everyone first
   const [everyone, ...rest] = channels;
-  rest.sort((a,b) => b.ts - a.ts);
+  rest.sort((a,b)=> b.ts - a.ts);
   const sorted = [everyone, ...rest];
 
   channelList.innerHTML = '';
@@ -111,37 +104,37 @@ async function loadChannels() {
   }
 }
 
-// Switch channel
+// --- Switch channel ---
 function selectChannel(key, label) {
   currentChannel = key;
   chatTitle.textContent = label;
   document.querySelectorAll('#channel-list li').forEach(li =>
     li.classList.toggle('active', li.dataset.channel === key)
   );
-  // Reset auto-scroll for this channel
-  initialScrolled[key] = false;
+  hasAutoScrolled[key] = false;
   loadMessages();
   loadFiles();
 }
 
-// 3) Polling loop
+// --- 3) Polling ---
 function startPolling() {
   loadMessages();
   loadFiles();
   loadChannels();
-  messageInterval = setInterval(()=>{
+  pollInterval = setInterval(()=>{
     loadMessages();
     loadFiles();
     loadChannels();
-  },1000);
+  }, 1000);
 }
 
-// 4) Login form handler
+// --- 4) Login form ---
 loginForm.onsubmit = async e => {
   e.preventDefault();
   const res = await fetch('/api/login', {
-    method:'POST', credentials:'include',
-    headers:{'Content-Type':'application/json'},
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       username: document.getElementById('username').value,
       password: document.getElementById('password').value
@@ -151,23 +144,23 @@ loginForm.onsubmit = async e => {
   else alert('Login failed');
 };
 
-// Logout
+// --- Logout ---
 logoutBtn.onclick = async () => {
-  await fetch('/api/logout',{method:'POST',credentials:'include'});
-  clearInterval(messageInterval);
+  await fetch('/api/logout', { method:'POST', credentials:'include' });
+  clearInterval(pollInterval);
   showLogin();
 };
 
-// Message input behavior
+// --- Message input ---
 messageText.addEventListener('keydown', e=>{
   if (e.key==='Enter' && !e.ctrlKey) { e.preventDefault(); sendMessage(); }
   else if (e.key==='Enter' && e.ctrlKey) { messageText.value += '\n'; }
 });
 sendBtn.onclick   = sendMessage;
 uploadBtn.onclick = ()=>fileInput.click();
-fileInput.onchange = uploadFile;
+fileInput.onchange= uploadFile;
 
-// Load messages (one-time auto-scroll to bottom)
+// --- Load messages & one-time scroll ---
 async function loadMessages() {
   const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials:'include' });
   if (!res.ok) return;
@@ -177,51 +170,51 @@ async function loadMessages() {
   messagesDiv.innerHTML     = '';
 
   for (const msg of data) {
-    const ts = new Date(msg.timestamp).toLocaleString('en-NZ',{ timeZone:userTimeZone });
+    const ts = new Date(msg.timestamp).toLocaleString('en-NZ', { timeZone: NZ_TIMEZONE });
     const div = document.createElement('div');
     div.className = 'message';
     div.innerHTML = `<span class="meta">[${ts}] ${msg.username}:</span> ${msg.content}`;
     if (userRole==='admin') {
-      const pinBtn = document.createElement('button');
-      pinBtn.className = 'pin-btn';
-      pinBtn.textContent = msg.pinned?'Unpin':'Pin';
-      pinBtn.onclick = ()=>togglePin(msg.id,!msg.pinned);
-      div.appendChild(pinBtn);
-      const delBtn = document.createElement('button');
-      delBtn.className = 'delete-btn';
-      delBtn.textContent = 'Delete';
-      delBtn.onclick = ()=>deleteMessage(msg.id);
-      div.appendChild(delBtn);
+      const p = document.createElement('button');
+      p.className = 'pin-btn';
+      p.textContent = msg.pinned?'Unpin':'Pin';
+      p.onclick = ()=>togglePin(msg.id,!msg.pinned);
+      div.appendChild(p);
+      const d = document.createElement('button');
+      d.className = 'delete-btn';
+      d.textContent = 'Delete';
+      d.onclick = ()=>deleteMessage(msg.id);
+      div.appendChild(d);
     }
     (msg.pinned ? pinnedContainer : messagesDiv).appendChild(div);
   }
 
-  if (!initialScrolled[currentChannel]) {
-    // scroll the section container fully to bottom
-    messagesSection.scrollTo({
-      top: messagesSection.scrollHeight,
-      behavior: 'smooth'
+  if (!hasAutoScrolled[currentChannel]) {
+    // wait a frame so DOM is settled
+    requestAnimationFrame(() => {
+      messagesSection.scrollTop = messagesSection.scrollHeight;
     });
-    initialScrolled[currentChannel] = true;
+    hasAutoScrolled[currentChannel] = true;
   }
 }
 
-// Send a message
+// --- Send a message ---
 async function sendMessage() {
-  const content = messageText.value.trim();
-  if (!content) return;
-  await fetch('/api/messages',{
-    method:'POST', credentials:'include',
+  const c = messageText.value.trim();
+  if (!c) return;
+  await fetch('/api/messages', {
+    method: 'POST',
+    credentials:'include',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ content, channel: currentChannel })
+    body: JSON.stringify({ content:c, channel:currentChannel })
   });
   messageText.value = '';
   loadMessages();
 }
 
-// Toggle pin
+// --- Pin/unpin ---
 async function togglePin(id, pinned) {
-  await fetch('/api/messages/pin',{
+  await fetch('/api/messages/pin', {
     method:'POST', credentials:'include',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ id, pinned })
@@ -229,13 +222,13 @@ async function togglePin(id, pinned) {
   loadMessages();
 }
 
-// Delete message
+// --- Delete message ---
 async function deleteMessage(id) {
   await fetch(`/api/messages?id=${id}`,{method:'DELETE',credentials:'include'});
   loadMessages();
 }
 
-// Load shared files
+// --- Load files ---
 async function loadFiles() {
   const res = await fetch(`/api/messages?channel=${currentChannel}`,{credentials:'include'});
   if (!res.ok) return;
@@ -245,7 +238,7 @@ async function loadFiles() {
   for (const msg of data) {
     const m = msg.content.match(/<a href="([^"]+)" target="_blank">([^<]+)<\/a>/);
     if (!m) continue;
-    const [, url, fn] = m;
+    const [,url,fn] = m;
     const key = decodeURIComponent(url.split('/').pop());
     const ext = fn.split('.').pop().toLowerCase();
 
@@ -259,9 +252,11 @@ async function loadFiles() {
       thumb.className = 'file-thumb';
     } else {
       thumb = document.createElement('i');
-      const map = { pdf:'fa-file-pdf', doc:'fa-file-word', docx:'fa-file-word',
-                    xls:'fa-file-excel', xlsx:'fa-file-excel',
-                    ppt:'fa-file-powerpoint', pptx:'fa-file-powerpoint' };
+      const map = {
+        pdf:'fa-file-pdf', doc:'fa-file-word', docx:'fa-file-word',
+        xls:'fa-file-excel', xlsx:'fa-file-excel',
+        ppt:'fa-file-powerpoint', pptx:'fa-file-powerpoint'
+      };
       thumb.className = `file-icon fas ${map[ext]||'fa-file'}`;
     }
     li.appendChild(thumb);
@@ -273,8 +268,7 @@ async function loadFiles() {
 
     if (userRole==='admin') {
       const db = document.createElement('button');
-      db.className = 'file-delete';
-      db.textContent = '×';
+      db.className='file-delete'; db.textContent='×';
       db.onclick = async () => {
         if (!confirm(`Delete ${fn}?`)) return;
         await fetch(`/api/upload?key=${encodeURIComponent(key)}`,{
@@ -289,7 +283,7 @@ async function loadFiles() {
   }
 }
 
-// Upload a file
+// --- Upload file ---
 async function uploadFile() {
   const f = fileInput.files[0];
   if (!f) return alert('No file selected');
@@ -298,14 +292,17 @@ async function uploadFile() {
   const r = await fetch('/api/upload',{method:'POST',credentials:'include',body:fm});
   if (!r.ok) {
     const e = await r.json().catch(()=>({}));
-    return alert('Upload failed: ' + (e.error || r.status));
+    return alert('Upload failed: '+(e.error||r.status));
   }
   const { filename, url } = await r.json();
 
   await fetch('/api/messages',{
     method:'POST',credentials:'include',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ content:`<a href="${url}" target="_blank">${filename}</a>`, channel: currentChannel })
+    body: JSON.stringify({
+      content:`<a href="${url}" target="_blank">${filename}</a>`,
+      channel: currentChannel
+    })
   });
 
   fileInput.value = '';
@@ -313,5 +310,5 @@ async function uploadFile() {
   loadMessages();
 }
 
-// Initialize
+// --- Start everything ---
 checkAuth();
