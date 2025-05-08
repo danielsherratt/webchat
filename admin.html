@@ -25,7 +25,7 @@
         <span class="logo-text">CESW Hub</span>
       </div>
       <div id="user-info"></div>
-      <button id="logout-btn" style="margin-top:1rem; background:#f44336; border:none; color:#fff; padding:0.5rem 1rem; border-radius:4px; cursor:pointer;">
+      <button id="logout-btn" style="margin-top:1rem; background:#f44336; border:none; color:#fff; padding:0.4rem 0.8rem; border-radius:4px; cursor:pointer;">
         <i class="fas fa-sign-out-alt"></i> Logout
       </button>
     </aside>
@@ -33,20 +33,38 @@
     <section id="chat-main">
       <header id="chat-header">
         <h2>Admin Panel</h2>
+        <button id="clear-messages-btn" style="background:none; border:none; color:#fff; font-size:1.2rem; cursor:pointer;">
+          <i class="fas fa-trash"></i>
+        </button>
       </header>
 
       <div id="admin-content" style="padding:1rem; flex:1; overflow:auto;">
+        <h3>Create New User</h3>
+        <div id="create-user-form" style="display:flex; gap:0.5rem; align-items:center; margin-bottom:1rem;">
+          <input type="text" id="new-username" placeholder="Username" style="flex:1; padding:0.5rem; border:1px solid #ccc; border-radius:4px;" />
+          <input type="password" id="new-password" placeholder="Password" style="flex:1; padding:0.5rem; border:1px solid #ccc; border-radius:4px;" />
+          <select id="new-role" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
+            <option value="member">Member</option>
+            <option value="owner">Owner</option>
+            <option value="admin">Admin</option>
+          </select>
+          <button id="create-user-btn" style="background:#00625f; color:#fff; border:none; padding:0.5rem; border-radius:4px; cursor:pointer;">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+
         <h3>All Users</h3>
-        <table id="users-table" style="width:100%; border-collapse: collapse; margin-top:0.5rem;">
+        <table id="users-table" style="width:100%; border-collapse:collapse; margin-top:0.5rem;">
           <thead>
             <tr>
+              <th style="border-bottom:1px solid #ccc; padding:0.5rem; text-align:left;">ID</th>
               <th style="border-bottom:1px solid #ccc; padding:0.5rem; text-align:left;">Username</th>
               <th style="border-bottom:1px solid #ccc; padding:0.5rem; text-align:left;">Role</th>
               <th style="border-bottom:1px solid #ccc; padding:0.5rem; text-align:left;">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <!-- filled by admin.js -->
+            <!-- populated by admin.js -->
           </tbody>
         </table>
       </div>
