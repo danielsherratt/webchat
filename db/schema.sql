@@ -1,0 +1,28 @@
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE,
+  password TEXT,
+  role TEXT
+);
+CREATE TABLE sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  token TEXT UNIQUE,
+  user_id INTEGER,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  channel TEXT,
+  content TEXT,
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  pinned INTEGER DEFAULT 0
+);
+CREATE TABLE files (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  filename TEXT,
+  mime TEXT,
+  data BLOB,
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+INSERT INTO users (username, password, role) VALUES ('admin', 'admin', 'admin');

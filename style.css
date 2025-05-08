@@ -1,25 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Work+Sans&display=swap');
+
 body {
+  font-family: 'Work Sans', sans-serif;
+  background: #f4f6f8;
+  margin: 0;
+  padding: 0;
+}
+#login-container, #chat-container {
   max-width: 600px;
-  margin: 20px auto;
-  font-family: sans-serif;
+  margin: 2rem auto;
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
-
-#feed {
-  margin-bottom: 1em;
+#login-container h1, #chat-header h2 {
+  color: #00625f;
 }
-
-.msg {
-  border-bottom: 1px solid #ddd;
-  padding: 8px 0;
+button {
+  background: #00625f;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: 4px;
 }
-
-form {
+button:hover {
+  background: #003541;
+}
+#channel-selector button {
+  background: transparent;
+  color: #00625f;
+  border: 1px solid #00625f;
+  margin-right: 0.5rem;
+}
+#channel-selector button.active {
+  background: #00625f;
+  color: #fff;
+}
+#messages {
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 1rem 0;
+}
+.message {
+  padding: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+.message .meta {
+  font-size: 0.8rem;
+  color: #666;
+}
+.pin-btn, .delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+#shared-files ul {
+  list-style: none;
+  padding: 0;
+}
+#shared-files li {
+  margin: 0.5rem 0;
+}
+#message-input {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
 }
-
-textarea {
-  resize: vertical;
-  min-height: 50px;
+#message-input textarea {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+#message-input #send-btn {
+  margin-left: 0.5rem;
 }

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CESW Hub Admin</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script defer src="/admin.js"></script>
+</head>
+<body>
+  <h1>Admin Section</h1>
+  <button id="logout-btn">Logout</button>
+  <section id="user-management">
+    <h2>Users</h2>
+    <form id="user-form">
+      <input type="hidden" id="user-id" />
+      <input type="text" id="new-username" placeholder="Username" required />
+      <input type="password" id="new-password" placeholder="Password" required />
+      <select id="new-role">
+        <option value="member">Member</option>
+        <option value="admin">Admin</option>
+      </select>
+      <button type="submit">Create / Update User</button>
+    </form>
+    <ul id="users-list"></ul>
+  </section>
+  <section id="message-management">
+    <h2>Messages</h2>
+    <button id="delete-all">Delete All Messages</button>
+  </section>
+</body>
+</html>
