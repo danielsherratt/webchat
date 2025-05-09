@@ -1,9 +1,8 @@
 // cesw_hub/main.js
 
-// Always display in NZST
 const NZ_TZ = 'Pacific/Auckland';
 
-// Element refs
+// Elements
 const loginContainer   = document.getElementById('login-container');
 const chatContainer    = document.getElementById('chat-container');
 const loginForm        = document.getElementById('login-form');
@@ -23,6 +22,9 @@ const uploadBtn        = document.getElementById('upload-btn');
 
 let userRole, userId, currentChannel = 'everyone';
 let pollInterval = null;
+
+// Track last loaded timestamp per channel
+const lastLoaded = {};
 
 // Helpers
 const showLogin = () => {
@@ -71,64 +73,65 @@ async function checkAuth() {
   showLogin();
 }
 
-// 2) Sidebar channels
+// 2) Sidebar
 async function loadChannels() {
   const channels = [];
   let msgs, last;
 
-  // Everyone
   msgs = await fetch(`/api/messages?channel=everyone`, { credentials: 'include' }).then(r => r.json());
-  last = msgs[msgs.length - 1];
-  channels.push({ key: 'everyone', label: 'Everyone', ts: last?.timestamp||0, author: last?.authorRole||null });
+  last = msgs[msgs.length-1];
+  channels.push({ key:'everyone', label:'Everyone', ts:last?.timestamp||0, author:last?.authorRole||null });
 
-  // Private chats
   if (userRole === 'member') {
     const key = `private-${userId}`;
     msgs = await fetch(`/api/messages?channel=${key}`, { credentials: 'include' }).then(r => r.json());
-    last = msgs[msgs.length - 1];
-    channels.push({ key, label: 'Admin', ts: last?.timestamp||0, author: last?.authorRole||null });
+    last = msgs[msgs.length-1];
+    channels.push({ key, label:'Admin', ts:last?.timestamp||0, author:last?.authorRole||null });
   } else {
     const users = await fetch('/api/users', { credentials: 'include' }).then(r => r.json());
-    for (const u of users.filter(u => u.role === 'member')) {
+    for (const u of users.filter(u=>u.role==='member')) {
       const key = `private-${u.id}`;
       msgs = await fetch(`/api/messages?channel=${key}`, { credentials: 'include' }).then(r => r.json());
-      last = msgs[msgs.length - 1];
-      channels.push({ key, label: u.username, ts: last?.timestamp||0, author: last?.authorRole||null });
+      last = msgs[msgs.length-1];
+      channels.push({ key, label:u.username, ts:last?.timestamp||0, author:last?.authorRole||null });
     }
   }
 
   const [ev,...rest] = channels;
-  rest.sort((a,b)=>b.ts - a.ts);
+  rest.sort((a,b)=>b.ts-a.ts);
   channelList.innerHTML = '';
-  [ev,...rest].forEach(ch => {
+  [ev,...rest].forEach(ch=>{
     const li = document.createElement('li');
     li.textContent    = ch.label + (userRole==='admin'&&ch.author==='member'?' *':'');
     li.dataset.channel = ch.key;
     if (ch.key === currentChannel) li.classList.add('active');
     if (userRole==='admin'&&ch.author==='member') li.classList.add('bold');
-    li.onclick = () => selectChannel(ch.key, ch.label);
+    li.onclick = () => selectChannel(ch.key,ch.label);
     channelList.appendChild(li);
   });
 }
 
-// Switch channel
-function selectChannel(key,label){
+function selectChannel(key,label) {
   currentChannel = key;
   chatTitle.textContent = label;
   document.querySelectorAll('#channel-list li')
     .forEach(li=>li.classList.toggle('active', li.dataset.channel===key));
+  // reset lastLoaded for this channel
+  delete lastLoaded[key];
   loadMessages();
   loadFiles();
 }
 
-// 3) Poll
-function startPolling(){
+// 3) Polling
+function startPolling() {
   loadMessages(); loadFiles(); loadChannels();
-  pollInterval = setInterval(()=>{loadMessages(); loadFiles(); loadChannels();},1000);
+  pollInterval = setInterval(()=>{
+    loadMessages(); loadFiles(); loadChannels();
+  },1000);
 }
 
 // 4) Login
-loginForm.onsubmit = async e => {
+loginForm.onsubmit = async e=>{
   e.preventDefault();
   const res = await fetch('/api/login',{
     method:'POST',credentials:'include',
@@ -138,46 +141,40 @@ loginForm.onsubmit = async e => {
       password:document.getElementById('password').value
     })
   });
-  if (res.ok) await checkAuth();
+  if(res.ok) await checkAuth();
   else alert('Login failed');
 };
 
-// Logout
-logoutBtn.onclick = async () => {
+logoutBtn.onclick = async ()=>{
   await fetch('/api/logout',{method:'POST',credentials:'include'});
   clearInterval(pollInterval);
-  window.location = '/';
+  window.location='/';
 };
 
-// Admin cog
-if (adminBtn) adminBtn.onclick = () => window.location = '/admin.html';
+if(adminBtn) adminBtn.onclick = ()=>window.location='/admin.html';
 
-// Input
-messageText.addEventListener('keydown', e => {
-  if (e.key==='Enter' && !e.ctrlKey) { e.preventDefault(); sendMessage(); }
-  else if (e.key==='Enter' && e.ctrlKey) { messageText.value += '\n'; }
+messageText.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.ctrlKey){e.preventDefault();sendMessage();}
+  else if(e.key==='Enter'&&e.ctrlKey){messageText.value+='\n';}
 });
-sendBtn.onclick   = sendMessage;
-uploadBtn.onclick = () => fileInput.click();
-fileInput.onchange= uploadFile;
+sendBtn.onclick=sendMessage;
+uploadBtn.onclick=()=>fileInput.click();
+fileInput.onchange=uploadFile;
 
-// 5) Load all messages + pinned inline, with headings, AM/PM, loading placeholder
+// 5) Load messages without flashing
 async function loadMessages(){
-  // clear & show loading
-  pinnedContainer.innerHTML = '';
-  messagesDiv.innerHTML = '<div class="loading">Loading latest messages…</div>';
-  messagesSection.style.visibility = 'hidden';
-
   const res = await fetch(`/api/messages?channel=${currentChannel}`,{credentials:'include'});
-  if (!res.ok) {
-    messagesDiv.innerHTML = '<div class="loading">Error loading messages</div>';
-    messagesSection.style.visibility = 'visible';
-    return;
-  }
+  if(!res.ok) return;
   const data = await res.json();
-  data.sort((a,b)=>a.timestamp - b.timestamp);
+  data.sort((a,b)=>a.timestamp-b.timestamp);
+  const newest = data.length? data[data.length-1].timestamp : 0;
+  if (lastLoaded[currentChannel] === newest) return;
+  lastLoaded[currentChannel] = newest;
 
-  messagesDiv.innerHTML = '';
+  // render
+  pinnedContainer.innerHTML = '';
+  messagesDiv.innerHTML     = '';
+
   let lastDate = null;
   for (const msg of data) {
     const dStr = toDateStr(msg.timestamp);
@@ -198,13 +195,12 @@ async function loadMessages(){
       const pinBtn = document.createElement('button');
       pinBtn.className   = 'pin-btn';
       pinBtn.textContent = msg.pinned?'Unpin':'Pin';
-      pinBtn.onclick     = ()=>togglePin(msg.id,!msg.pinned);
+      pinBtn.onclick     = ()=>{ delete lastLoaded[currentChannel]; togglePin(msg.id,!msg.pinned); };
       div.appendChild(pinBtn);
-
       const delBtn = document.createElement('button');
       delBtn.className   = 'delete-btn';
       delBtn.textContent = 'Delete';
-      delBtn.onclick     = ()=>deleteMessage(msg.id);
+      delBtn.onclick     = ()=>{ delete lastLoaded[currentChannel]; deleteMessage(msg.id); };
       div.appendChild(delBtn);
     }
     messagesDiv.appendChild(div);
@@ -213,10 +209,9 @@ async function loadMessages(){
     }
   }
 
-  // jump to bottom, then show
+  // scroll to bottom once
   requestAnimationFrame(()=>{
     messagesSection.scrollTop = messagesSection.scrollHeight;
-    messagesSection.style.visibility = 'visible';
   });
 }
 
@@ -228,6 +223,7 @@ async function sendMessage(){
     body:JSON.stringify({content:c,channel:currentChannel})
   });
   messageText.value='';
+  delete lastLoaded[currentChannel];
   loadMessages();
 }
 
@@ -240,7 +236,7 @@ async function togglePin(id,pinned){
   loadMessages();
 }
 
-// Delete
+// Delete message
 async function deleteMessage(id){
   await fetch(`/api/messages?id=${id}`,{method:'DELETE',credentials:'include'});
   loadMessages();
@@ -249,39 +245,37 @@ async function deleteMessage(id){
 // 6) Shared files as cards
 async function loadFiles(){
   const res = await fetch(`/api/messages?channel=${currentChannel}`,{credentials:'include'});
-  if (!res.ok) return;
+  if(!res.ok) return;
   const data = await res.json();
-  filesList.innerHTML = '';
+  filesList.innerHTML='';
 
-  data.forEach(msg => {
+  data.forEach(msg=>{
     const m = msg.content.match(/<a href="([^"]+)" target="_blank">([^<]+)<\/a>/);
-    if (!m) return;
-    const [, url, fn] = m;
+    if(!m) return;
+    const [,url,fn] = m;
     const ext = fn.split('.').pop().toLowerCase();
 
-    const a = document.createElement('a');
+    const a=document.createElement('a');
     a.href    = url;
     a.target  = '_blank';
     a.className = 'file-card';
 
     let thumb;
-    if (['png','jpg','jpeg','gif','webp'].includes(ext)) {
+    if(['png','jpg','jpeg','gif','webp'].includes(ext)) {
       thumb = document.createElement('img');
       thumb.src = url;
       thumb.alt = fn;
     } else {
       thumb = document.createElement('i');
-      const icons = {
-        pdf:'fa-file-pdf', doc:'fa-file-word', docx:'fa-file-word',
-        xls:'fa-file-excel', xlsx:'fa-file-excel',
-        ppt:'fa-file-powerpoint', pptx:'fa-file-powerpoint'
-      };
+      const icons = { pdf:'fa-file-pdf',doc:'fa-file-word',docx:'fa-file-word',
+                      xls:'fa-file-excel',xlsx:'fa-file-excel',
+                      ppt:'fa-file-powerpoint',pptx:'fa-file-powerpoint' };
       thumb.className = `file-icon fas ${icons[ext]||'fa-file'}`;
     }
     a.appendChild(thumb);
 
     const nameDiv = document.createElement('div');
-    nameDiv.className = 'file-name';
+    nameDiv.className  = 'file-name';
     nameDiv.textContent = fn;
     a.appendChild(nameDiv);
 
@@ -289,23 +283,20 @@ async function loadFiles(){
   });
 }
 
-// Upload
+// Upload file
 async function uploadFile(){
-  const f = fileInput.files[0];
-  if (!f) return alert('No file selected');
-  const fm = new FormData(); fm.append('file', f);
-  const r = await fetch('/api/upload',{method:'POST',credentials:'include',body:fm});
-  if (!r.ok) {
-    const e = await r.json().catch(()=>({}));
-    return alert('Upload failed: '+(e.error||r.status));
-  }
-  const { filename, url } = await r.json();
+  const f=fileInput.files[0]; if(!f)return alert('No file selected');
+  const fm=new FormData(); fm.append('file',f);
+  const r=await fetch('/api/upload',{method:'POST',credentials:'include',body:fm});
+  if(!r.ok){ const e=await r.json().catch(()=>({})); return alert('Upload failed: '+(e.error||r.status)); }
+  const {filename,url} = await r.json();
   await fetch('/api/messages',{method:'POST',credentials:'include',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({content:`<a href="${url}" target="_blank">${filename}</a>`,channel:currentChannel})
   });
   fileInput.value='';
   loadFiles();
+  delete lastLoaded[currentChannel];
   loadMessages();
 }
 
