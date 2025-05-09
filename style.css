@@ -139,9 +139,7 @@ body {
   z-index: 1;
   border-bottom: 1px solid #e0e0e0;
 }
-#messages {
-  /* this is just a container */
-}
+
 .message {
   padding: 0.5rem;
   border-bottom: 1px solid #e0e0e0;
@@ -219,5 +217,36 @@ body {
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Date headings in message feed */
+.date-heading {
+  text-align: center;
+  margin: 0.5rem 0;
+  font-weight: bold;
+  color: #666;
+}
+
+/* Pin/Delete as real buttons */
+.pin-btn,
+.delete-btn {
+  background: #00625f;
+  color: #fff;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  margin-left: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.delete-btn { background: #c00; }
+
+/* Cog icon in chat header */
+#admin-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.2rem;
   cursor: pointer;
 }
