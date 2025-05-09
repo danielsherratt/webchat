@@ -48,8 +48,7 @@ function toDateStr(ts) {
 }
 function headingText(dStr) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: NZ_TZ });
-  const yday  = new Date(Date.now() - 864e5)
-    .toLocaleDateString('en-CA', { timeZone: NZ_TZ });
+  const yday  = new Date(Date.now() - 864e5).toLocaleDateString('en-CA', { timeZone: NZ_TZ });
   if (dStr === today) return 'Today';
   if (dStr === yday ) return 'Yesterday';
   return new Date(dStr).toLocaleDateString('en-NZ', {
@@ -114,20 +113,20 @@ async function loadChannels() {
   let msgs, last;
 
   msgs = await fetch(`/api/messages?channel=everyone`, { credentials:'include' }).then(r=>r.json());
-  last = msgs[msgs.length-1];
+  last = msgs[msgs.length - 1];
   channels.push({ key:'everyone', label:'Everyone', ts:last?.timestamp||0, author:last?.authorRole||null });
 
   if (userRole === 'member') {
     const key = `private-${userId}`;
     msgs = await fetch(`/api/messages?channel=${key}`, { credentials:'include' }).then(r=>r.json());
-    last = msgs[msgs.length-1];
+    last = msgs[msgs.length - 1];
     channels.push({ key, label:'Admin', ts:last?.timestamp||0, author:last?.authorRole||null });
   } else {
     const users = await fetch('/api/users', { credentials:'include' }).then(r=>r.json());
     for (const u of users.filter(u=>u.role==='member')) {
       const key = `private-${u.id}`;
       msgs = await fetch(`/api/messages?channel=${key}`, { credentials:'include' }).then(r=>r.json());
-      last = msgs[msgs.length-1];
+      last = msgs[msgs.length - 1];
       channels.push({ key, label:u.username, ts:last?.timestamp||0, author:last?.authorRole||null });
     }
   }
@@ -150,7 +149,7 @@ async function loadChannels() {
 function selectChannel(key, label) {
   currentChannel        = key;
   chatTitle.textContent = label;
-  document.querySelectorAll('#channel-list li').forEach(li =>
+  document.querySelectorAll('#channel-list li').forEach(li=>
     li.classList.toggle('active', li.dataset.channel===key)
   );
   allMessages     = [];
@@ -177,17 +176,30 @@ function startPolling() {
 // ========== LOGIN / LOGOUT ==========
 loginForm.onsubmit = async e => {
   e.preventDefault();
-  const res = await fetch('/api/login', {
-    method:      'POST',
-    credentials: 'include',
-    headers:     { 'Content-Type': 'application/json' },
-    body:        JSON.stringify({
-      username: document.getElementById('username').value,
-      password: document.getElementById('password').value
-    })
-  });
-  if (res.ok) await checkAuth();
-  else alert('Login failed');
+  const payload = {
+    username: document.getElementById('username').value,
+    password: document.getElementById('password').value
+  };
+  try {
+    const res = await fetch('/api/login', {
+      method:      'POST',
+      credentials: 'include',
+      headers:     { 'Content-Type': 'application/json' },
+      body:        JSON.stringify(payload)
+    });
+    console.log('Login status:', res.status);
+    const text = await res.text();
+    console.log('Login response:', text);
+    if (res.ok) {
+      // If login returns JSON, parse again and store if needed
+      await checkAuth();
+    } else {
+      alert(`Login failed (${res.status}): ${text}`);
+    }
+  } catch (err) {
+    console.error('Login error:', err);
+    alert('Login error: ' + err.message);
+  }
 };
 
 logoutBtn.onclick = async () => {
@@ -200,8 +212,12 @@ if (adminBtn) adminBtn.onclick = () => window.location = '/admin.html';
 
 // ========== MESSAGE INPUT ==========
 messageText.addEventListener('keydown', e => {
-  if (e.key==='Enter' && !e.ctrlKey) { e.preventDefault(); sendMessage(); }
-  else if (e.key==='Enter' && e.ctrlKey) { messageText.value += '\n'; }
+  if (e.key === 'Enter' && !e.ctrlKey) {
+    e.preventDefault();
+    sendMessage();
+  } else if (e.key === 'Enter' && e.ctrlKey) {
+    messageText.value += '\n';
+  }
 });
 sendBtn.onclick   = sendMessage;
 uploadBtn.onclick = () => fileInput.click();
@@ -209,9 +225,7 @@ fileInput.onchange = uploadFile;
 
 // ========== LOAD & PAGE MESSAGES ==========
 async function loadAllMessages() {
-  const res = await fetch(`/api/messages?channel=${currentChannel}`, {
-    credentials:'include'
-  });
+  const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials:'include' });
   if (!res.ok) return;
   const data = await res.json();
   data.sort((a,b) => a.timestamp - b.timestamp);
@@ -221,13 +235,13 @@ async function loadAllMessages() {
 }
 
 function renderPage() {
-  // Pinned
+  // Pinned panel
   pinnedContainer.innerHTML = '';
   allMessages.slice(-loadedCount)
     .filter(m => m.pinned)
     .forEach(m => pinnedContainer.appendChild(makeMessageDiv(m).cloneNode(true)));
 
-  // Feed
+  // Messages feed
   messagesDiv.innerHTML = '';
   let lastDate = null;
   allMessages.slice(-loadedCount).forEach(m => {
@@ -251,11 +265,11 @@ function renderPage() {
 // ========== INFINITE SCROLL UP ==========
 messagesDiv.addEventListener('scroll', () => {
   if (messagesDiv.scrollTop < 50 && loadedCount < allMessages.length) {
-    const prevHeight = messagesDiv.scrollHeight;
+    const prevH = messagesDiv.scrollHeight;
     loadedCount = Math.min(loadedCount + PAGE_SIZE, allMessages.length);
-    autoScroll = false;
+    autoScroll  = false;
     renderPage();
-    messagesDiv.scrollTop = messagesDiv.scrollHeight - prevHeight;
+    messagesDiv.scrollTop = messagesDiv.scrollHeight - prevH;
   }
   const atBottom = messagesDiv.scrollTop + messagesDiv.clientHeight >= messagesDiv.scrollHeight - 1;
   if (atBottom) autoScroll = true;
@@ -269,7 +283,7 @@ async function sendMessage() {
     method:      'POST',
     credentials: 'include',
     headers:     { 'Content-Type': 'application/json' },
-    body:        JSON.stringify({ content, channel:currentChannel })
+    body:        JSON.stringify({ content, channel: currentChannel })
   });
   messageText.value = '';
   autoScroll        = true;
@@ -310,24 +324,19 @@ async function deleteMessage(id) {
 
 // ========== SHARED FILES ==========
 async function loadFiles() {
-  const res = await fetch(`/api/messages?channel=${currentChannel}`, {
-    credentials:'include'
-  });
+  const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials:'include' });
   if (!res.ok) return;
   const data = await res.json();
   filesList.innerHTML = '';
-
   data.forEach(msg => {
     const m = msg.content.match(/<a href="([^"]+)" target="_blank">([^<]+)<\/a>/);
     if (!m) return;
     const [, url, fn] = m;
     const ext = fn.split('.').pop().toLowerCase();
-
     const a = document.createElement('a');
     a.href       = url;
     a.target     = '_blank';
     a.className  = 'file-card';
-
     let thumb;
     if (['png','jpg','jpeg','gif','webp'].includes(ext)) {
       thumb = document.createElement('img'); thumb.src = url; thumb.alt = fn;
@@ -341,12 +350,10 @@ async function loadFiles() {
       thumb.className = `file-icon fas ${icons[ext]||'fa-file'}`;
     }
     a.appendChild(thumb);
-
     const nameDiv = document.createElement('div');
     nameDiv.className  = 'file-name';
     nameDiv.textContent = fn;
     a.appendChild(nameDiv);
-
     filesList.appendChild(a);
   });
 }
@@ -366,7 +373,7 @@ async function uploadFile() {
     method:      'POST',
     credentials: 'include',
     headers:     { 'Content-Type': 'application/json' },
-    body:        JSON.stringify({ content:`<a href="${url}" target="_blank">${filename}</a>`, channel:currentChannel })
+    body:        JSON.stringify({ content:`<a href="${url}" target="_blank">${filename}</a>`, channel: currentChannel })
   });
   fileInput.value = '';
   loadFiles();
