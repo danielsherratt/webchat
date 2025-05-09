@@ -7,10 +7,14 @@
   padding: 0;
 }
 
+/* Let the chat container fill the viewport */
+html, body {
+  height: 100%;
+}
+
 body {
   font-family: 'Work Sans', sans-serif;
   background: #f4f6f8;
-  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -52,6 +56,7 @@ body {
   height: 100%;
   display: flex;
   background: #fff;
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0,0,0,0.15);
 }
@@ -115,6 +120,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 #chat-header {
   background: #00625f;
@@ -137,7 +143,9 @@ body {
 
 /* Pinned messages */
 #pinned-section {
+  flex: 0 0 auto;
   padding: 0.5rem 1rem;
+  overflow: auto;
 }
 #pinned-section h3 {
   position: sticky;
@@ -156,7 +164,9 @@ body {
 
 /* Shared files */
 #shared-files {
+  flex: 0 0 auto;
   padding: 0.5rem 1rem;
+  overflow: auto;
 }
 #shared-files h3 {
   position: sticky;
@@ -166,7 +176,6 @@ body {
   border-bottom: 1px solid #e0e0e0;
   padding: 0.5rem 0;
 }
-/* display cards row-wise */
 .files-grid {
   display: flex;
   flex-wrap: wrap;
@@ -199,11 +208,11 @@ body {
 
 /* Messages feed */
 #messages-section {
-  flex: 1;
-  padding: 0.5rem 1rem;
-  position: relative;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  padding: 0.5rem 1rem;
+  overflow: hidden;
 }
 #messages-section h3 {
   position: sticky;
@@ -214,7 +223,7 @@ body {
   padding: 0.5rem 0;
 }
 #messages {
-  flex: 1;
+  flex: 1 1 auto;
   overflow-y: auto;
 }
 .message {
