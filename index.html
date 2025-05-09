@@ -11,7 +11,8 @@
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     integrity="sha512-pb3R5N8j+vGv2Om+Sg6L/JWQ1CLxOrvDwOxg4bO6XsfZQnF8vtr+r1z3L07W/a/r0TcuB/9B+KXj3tDkXNTaTA=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
   />
   <link rel="stylesheet" href="/style.css" />
   <script defer src="/main.js"></script>
@@ -45,21 +46,25 @@
         </div>
       </header>
 
+      <!-- 1) Pinned -->
       <div id="pinned-section">
         <h3>Pinned</h3>
         <div id="pinned-messages"></div>
       </div>
 
+      <!-- 2) Shared Files -->
+      <div id="shared-files">
+        <h3>Shared Files</h3>
+        <div id="files-list" class="files-grid"></div>
+      </div>
+
+      <!-- 3) Messages -->
       <div id="messages-section">
         <h3>Messages</h3>
         <div id="messages"></div>
       </div>
 
-      <div id="shared-files">
-        <h3>Shared Files</h3>
-        <ul id="files-list"></ul>
-      </div>
-
+      <!-- Input -->
       <div id="message-input">
         <textarea id="message-text" rows="2" placeholder="Type a message…"></textarea>
         <button id="send-btn">Send</button>
