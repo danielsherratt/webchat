@@ -1,16 +1,17 @@
 // cesw_hub/main.js
 
+// ========== CONFIG ==========
 const NZ_TZ     = 'Pacific/Auckland';
 const PAGE_SIZE = 10;
 
-// State
+// ========== STATE ==========
 let userRole, userId, currentChannel = 'everyone';
-let allMessages     = [];
-let messagePage     = 1;
+let allMessages     = [];      // full history for this channel
+let loadedCount     = PAGE_SIZE;
 let autoScroll      = true;
 let pollInterval    = null;
 
-// Elements
+// ========== ELEMENTS ==========
 const loginContainer  = document.getElementById('login-container');
 const chatContainer   = document.getElementById('chat-container');
 const loginForm       = document.getElementById('login-form');
@@ -27,7 +28,7 @@ const sendBtn         = document.getElementById('send-btn');
 const fileInput       = document.getElementById('file-input');
 const uploadBtn       = document.getElementById('upload-btn');
 
-// Helpers
+// ========== HELPERS ==========
 function showLogin() {
   loginContainer.style.display = 'block';
   chatContainer.style.display  = 'none';
@@ -38,28 +39,62 @@ function showChat() {
 }
 function greet() {
   const h = new Date().getHours();
-  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  return h < 12 ? 'Good morning'
+       : h < 18 ? 'Good afternoon'
+       : 'Good evening';
 }
 function toDateStr(ts) {
   return new Date(ts).toLocaleDateString('en-CA', { timeZone: NZ_TZ });
 }
 function headingText(dStr) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: NZ_TZ });
-  const yday  = new Date(Date.now() - 864e5).toLocaleDateString('en-CA', { timeZone: NZ_TZ });
+  const yday  = new Date(Date.now() - 864e5)
+    .toLocaleDateString('en-CA', { timeZone: NZ_TZ });
   if (dStr === today) return 'Today';
-  if (dStr === yday)  return 'Yesterday';
+  if (dStr === yday ) return 'Yesterday';
   return new Date(dStr).toLocaleDateString('en-NZ', {
-    timeZone: NZ_TZ, year:'numeric', month:'short', day:'numeric'
+    timeZone: NZ_TZ,
+    year: 'numeric', month: 'short', day: 'numeric'
   });
 }
 
-// 1) Auth & init
+// Build a single message DOM node (with pin/delete for admins)
+function makeMessageDiv(msg) {
+  const timeStr = new Date(msg.timestamp).toLocaleTimeString('en-NZ', {
+    timeZone: NZ_TZ,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+  const div = document.createElement('div');
+  div.className = 'message';
+  div.innerHTML = `<span class="meta">[${timeStr}] ${msg.username}:</span> ${msg.content}`;
+
+  if (userRole === 'admin') {
+    const pin = document.createElement('button');
+    pin.className   = 'pin-btn';
+    pin.textContent = msg.pinned ? 'Unpin' : 'Pin';
+    pin.onclick     = () => { autoScroll = true; togglePin(msg.id, !msg.pinned); };
+    div.appendChild(pin);
+
+    const del = document.createElement('button');
+    del.className   = 'delete-btn';
+    del.textContent = 'Delete';
+    del.onclick     = () => { autoScroll = true; deleteMessage(msg.id); };
+    div.appendChild(del);
+  }
+
+  return div;
+}
+
+// ========== AUTH & INITIALIZATION ==========
 async function checkAuth() {
   try {
     const res = await fetch('/api/auth', { credentials:'include' });
     if (res.ok) {
       const { username, role, id } = await res.json();
-      userRole = role; userId = id;
+      userRole = role;
+      userId   = id;
       userInfoDiv.textContent = `${greet()}, ${username}`;
       if (role === 'admin' && adminBtn) adminBtn.style.display = 'inline-block';
       showChat();
@@ -68,37 +103,45 @@ async function checkAuth() {
       return;
     }
   } catch (e) {
-    console.error(e);
+    console.error('checkAuth error', e);
   }
   showLogin();
 }
 
-// 2) Sidebar channels
+// ========== CHANNELS SIDEBAR ==========
 async function loadChannels() {
   const channels = [];
   let msgs, last;
 
+  // Everyone
   msgs = await fetch(`/api/messages?channel=everyone`, { credentials:'include' }).then(r=>r.json());
-  last = msgs[msgs.length-1];
-  channels.push({ key:'everyone', label:'Everyone', ts:last?.timestamp||0, author:last?.authorRole||null });
+  last = msgs[msgs.length - 1];
+  channels.push({
+    key:    'everyone',
+    label:  'Everyone',
+    ts:     last?.timestamp || 0,
+    author: last?.authorRole || null
+  });
 
+  // Private chats
   if (userRole === 'member') {
     const key = `private-${userId}`;
     msgs = await fetch(`/api/messages?channel=${key}`, { credentials:'include' }).then(r=>r.json());
-    last = msgs[msgs.length-1];
+    last = msgs[msgs.length - 1];
     channels.push({ key, label:'Admin', ts:last?.timestamp||0, author:last?.authorRole||null });
   } else {
     const users = await fetch('/api/users', { credentials:'include' }).then(r=>r.json());
     for (const u of users.filter(u=>u.role==='member')) {
       const key = `private-${u.id}`;
       msgs = await fetch(`/api/messages?channel=${key}`, { credentials:'include' }).then(r=>r.json());
-      last = msgs[msgs.length-1];
+      last = msgs[msgs.length - 1];
       channels.push({ key, label:u.username, ts:last?.timestamp||0, author:last?.authorRole||null });
     }
   }
 
-  const [ev,...rest] = channels;
-  rest.sort((a,b)=>b.ts - a.ts);
+  const [ev, ...rest] = channels;
+  rest.sort((a,b) => b.ts - a.ts);
+
   channelList.innerHTML = '';
   [ev, ...rest].forEach(ch => {
     const li = document.createElement('li');
@@ -111,24 +154,23 @@ async function loadChannels() {
   });
 }
 
-// 3) Switch channel
 function selectChannel(key, label) {
-  currentChannel = key;
+  currentChannel        = key;
   chatTitle.textContent = label;
-  document.querySelectorAll('#channel-list li').forEach(li =>
+  document.querySelectorAll('#channel-list li').forEach(li=>
     li.classList.toggle('active', li.dataset.channel === key)
   );
   // reset paging + scroll
-  allMessages = [];
-  messagePage  = 1;
-  autoScroll   = true;
+  allMessages     = [];
+  loadedCount     = PAGE_SIZE;
+  autoScroll      = true;
   messagesDiv.innerHTML     = '';
   pinnedContainer.innerHTML = '';
   loadAllMessages();
   loadFiles();
 }
 
-// 4) Polling
+// ========== POLLING ==========
 function startPolling() {
   loadAllMessages();
   loadFiles();
@@ -140,7 +182,7 @@ function startPolling() {
   }, 1000);
 }
 
-// 5) Login/Logout
+// ========== LOGIN / LOGOUT ==========
 loginForm.onsubmit = async e => {
   e.preventDefault();
   const res = await fetch('/api/login', {
@@ -154,14 +196,16 @@ loginForm.onsubmit = async e => {
   if (res.ok) await checkAuth();
   else alert('Login failed');
 };
+
 logoutBtn.onclick = async () => {
   await fetch('/api/logout', { method:'POST', credentials:'include' });
   clearInterval(pollInterval);
   window.location = '/';
 };
+
 if (adminBtn) adminBtn.onclick = () => window.location = '/admin.html';
 
-// 6) Input behavior
+// ========== MESSAGE INPUT ==========
 messageText.addEventListener('keydown', e => {
   if (e.key==='Enter' && !e.ctrlKey) { e.preventDefault(); sendMessage(); }
   else if (e.key==='Enter' && e.ctrlKey) { messageText.value += '\n'; }
@@ -170,32 +214,29 @@ sendBtn.onclick   = sendMessage;
 uploadBtn.onclick = () => fileInput.click();
 fileInput.onchange = uploadFile;
 
-// 7) Fetch all messages once, then render pages
+// ========== LOAD ALL + RENDER PAGES ==========
 async function loadAllMessages() {
   const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials:'include' });
   if (!res.ok) return;
   const data = await res.json();
   data.sort((a,b)=>a.timestamp - b.timestamp);
   allMessages = data;
+  loadedCount = PAGE_SIZE;
   renderPage();
 }
 
-// Render the current page of messages
 function renderPage() {
-  // slice for page: newest messagesPage * PAGE_SIZE
-  const startIdx = Math.max(allMessages.length - messagePage*PAGE_SIZE, 0);
-  const slice    = allMessages.slice(startIdx);
-
-  // pinned panel
+  // 1) Pinned
   pinnedContainer.innerHTML = '';
-  slice.filter(m=>m.pinned).forEach(m => {
-    pinnedContainer.appendChild(makeMessageDiv(m).cloneNode(true));
-  });
+  allMessages
+    .slice(-loadedCount)
+    .filter(m => m.pinned)
+    .forEach(m => pinnedContainer.appendChild(makeMessageDiv(m).cloneNode(true)));
 
-  // feed
+  // 2) Feed
   messagesDiv.innerHTML = '';
   let lastDate = null;
-  slice.forEach(m => {
+  allMessages.slice(-loadedCount).forEach(m => {
     const dStr = toDateStr(m.timestamp);
     if (dStr !== lastDate) {
       lastDate = dStr;
@@ -207,107 +248,93 @@ function renderPage() {
     messagesDiv.appendChild(makeMessageDiv(m));
   });
 
-  // auto-scroll
+  // Auto-scroll
   if (autoScroll) {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
     autoScroll = false;
   }
 }
 
-// Build message element with admin buttons
-function makeMessageDiv(msg) {
-  const timeStr = new Date(msg.timestamp).toLocaleTimeString('en-NZ',{
-    timeZone:NZ_TZ, hour:'numeric', minute:'2-digit', hour12:true
-  });
-  const div = document.createElement('div');
-  div.className = 'message';
-  div.innerHTML = `<span class="meta">[${timeStr}] ${msg.username}:</span> ${msg.content}`;
-  if (userRole==='admin') {
-    const pin = document.createElement('button');
-    pin.className   = 'pin-btn';
-    pin.textContent = msg.pinned ? 'Unpin' : 'Pin';
-    pin.onclick     = () => { autoScroll = true; togglePin(msg.id, !msg.pinned); };
-    div.appendChild(pin);
-
-    const del = document.createElement('button');
-    del.className   = 'delete-btn';
-    del.textContent = 'Delete';
-    del.onclick     = () => { autoScroll = true; deleteMessage(msg.id); };
-    div.appendChild(del);
-  }
-  return div;
-}
-
-// 8) Infinite scroll up for older messages
+// ========== INFINITE SCROLL UP ==========
 messagesDiv.addEventListener('scroll', () => {
-  const atTop    = messagesDiv.scrollTop < 50;
-  const atBottom = messagesDiv.scrollTop + messagesDiv.clientHeight >= messagesDiv.scrollHeight - 1;
-
-  if (atBottom) {
-    autoScroll = true;
-  }
-  if (atTop && allMessages.length > messagePage*PAGE_SIZE) {
+  // if near top, load more
+  if (messagesDiv.scrollTop < 50 && loadedCount < allMessages.length) {
     const prevHeight = messagesDiv.scrollHeight;
-    messagePage++;
+    loadedCount = Math.min(loadedCount + PAGE_SIZE, allMessages.length);
     autoScroll = false;
     renderPage();
-    // preserve scroll position
+    // preserve position
     messagesDiv.scrollTop = messagesDiv.scrollHeight - prevHeight;
   }
+  // if at bottom, re-enable autoScroll
+  const atBottom = messagesDiv.scrollTop + messagesDiv.clientHeight >= messagesDiv.scrollHeight - 1;
+  if (atBottom) autoScroll = true;
 });
 
-// 9) Send / Pin / Delete
+// ========== SEND / PIN / DELETE ==========
 async function sendMessage() {
-  const c = messageText.value.trim(); if (!c) return;
+  const content = messageText.value.trim();
+  if (!content) return;
   await fetch('/api/messages', {
     method:'POST', credentials:'include',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ content:c, channel:currentChannel })
+    body: JSON.stringify({ content, channel:currentChannel })
   });
   messageText.value = '';
   autoScroll = true;
-  messagePage = 1;
+  loadedCount = PAGE_SIZE;
   loadAllMessages();
 }
 
-async function togglePin(id,pinned) {
-  await fetch('/api/messages/pin', {
-    method:'PUT', credentials:'include',
+async function togglePin(id, pinned) {
+  const res = await fetch('/api/messages/pin', {
+    method:'POST', credentials:'include',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ id, pinned })
   });
-  autoScroll = true;
-  loadAllMessages();
+  if (res.ok) {
+    // reflect in-memory and re-render
+    const msg = allMessages.find(m=>m.id===id);
+    if (msg) msg.pinned = pinned;
+    autoScroll = true;
+    renderPage();
+  } else {
+    alert('Pin/unpin failed');
+  }
 }
 
 async function deleteMessage(id) {
-  await fetch(`/api/messages?id=${id}`, { method:'DELETE', credentials:'include' });
-  autoScroll = true;
-  loadAllMessages();
+  const res = await fetch(`/api/messages?id=${id}`, {
+    method:'DELETE', credentials:'include'
+  });
+  if (res.ok) {
+    allMessages = allMessages.filter(m=>m.id!==id);
+    autoScroll = true;
+    renderPage();
+  } else {
+    alert('Delete failed');
+  }
 }
 
-// 10) Shared files
+// ========== SHARED FILES ==========
 async function loadFiles() {
   const res = await fetch(`/api/messages?channel=${currentChannel}`, { credentials:'include' });
   if (!res.ok) return;
   const data = await res.json();
   filesList.innerHTML = '';
-
   data.forEach(msg => {
     const m = msg.content.match(/<a href="([^"]+)" target="_blank">([^<]+)<\/a>/);
     if (!m) return;
     const [, url, fn] = m;
     const ext = fn.split('.').pop().toLowerCase();
-
     const a = document.createElement('a');
-    a.href      = url;
-    a.target    = '_blank';
-    a.className = 'file-card';
+    a.href       = url;
+    a.target     = '_blank';
+    a.className  = 'file-card';
 
     let thumb;
     if (['png','jpg','jpeg','gif','webp'].includes(ext)) {
-      thumb = document.createElement('img');
-      thumb.src = url; thumb.alt = fn;
+      thumb = document.createElement('img'); thumb.src = url; thumb.alt = fn;
     } else {
       thumb = document.createElement('i');
       const icons = {
@@ -328,15 +355,17 @@ async function loadFiles() {
   });
 }
 
-// 11) Upload
+// ========== UPLOAD ==========
 async function uploadFile() {
   const f = fileInput.files[0];
   if (!f) return alert('No file selected');
   const fm = new FormData(); fm.append('file', f);
-  const r  = await fetch('/api/upload', { method:'POST', credentials:'include', body:fm });
+  const r  = await fetch('/api/upload', {
+    method:'POST', credentials:'include', body:fm
+  });
   if (!r.ok) {
-    const e = await r.json().catch(()=>({}));
-    return alert('Upload failed: ' + (e.error||r.status));
+    const e = await r.json().catch(()=>({})); 
+    return alert('Upload failed: '+(e.error||r.status));
   }
   const { filename, url } = await r.json();
   await fetch('/api/messages', {
@@ -346,10 +375,10 @@ async function uploadFile() {
   });
   fileInput.value = '';
   loadFiles();
-  autoScroll = true;
-  messagePage = 1;
+  autoScroll   = true;
+  loadedCount  = PAGE_SIZE;
   loadAllMessages();
 }
 
-// Start it up
+// ========== START ==========
 checkAuth();
