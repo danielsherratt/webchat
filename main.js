@@ -1,6 +1,5 @@
 // cesw_hub/main.js
 
-// Always use NZST
 const NZ_TZ = 'Pacific/Auckland';
 
 // Element refs
@@ -8,7 +7,7 @@ const loginContainer   = document.getElementById('login-container');
 const chatContainer    = document.getElementById('chat-container');
 const loginForm        = document.getElementById('login-form');
 const logoutBtn        = document.getElementById('logout-btn');
-const adminBtn         = document.getElementById('admin-btn');          // may be null
+const adminBtn         = document.getElementById('admin-btn');
 const userInfoDiv      = document.getElementById('user-info');
 const channelList      = document.getElementById('channel-list');
 const chatTitle        = document.getElementById('chat-title');
@@ -21,12 +20,10 @@ const sendBtn          = document.getElementById('send-btn');
 const fileInput        = document.getElementById('file-input');
 const uploadBtn        = document.getElementById('upload-btn');
 
-let userRole, userId;
-let currentChannel = 'everyone';
-let pollInterval;
-let daysToShow = 0;
+let userRole, userId, currentChannel = 'everyone';
+let pollInterval, daysToShow = 0;
 
-// Helpers
+// UI helpers
 const showLogin = () => {
   loginContainer.style.display = 'block';
   chatContainer.style.display  = 'none';
@@ -44,58 +41,56 @@ function greet() {
 function toDateStr(ts) {
   return new Date(ts).toLocaleDateString('en-CA',{timeZone:NZ_TZ});
 }
-function headingText(dStr) {
+function headingText(d) {
   const today = new Date().toLocaleDateString('en-CA',{timeZone:NZ_TZ});
-  const yday  = new Date(Date.now()-864e5).toLocaleDateString('en-CA',{timeZone:NZ_TZ});
-  if (dStr===today) return 'Today';
-  if (dStr===yday)  return 'Yesterday';
-  return new Date(dStr).toLocaleDateString('en-NZ',{timeZone:NZ_TZ,month:'short',day:'numeric',year:'numeric'});
+  const yday  = new Date(Date.now()-864e5)
+    .toLocaleDateString('en-CA',{timeZone:NZ_TZ});
+  if (d===today) return 'Today';
+  if (d===yday)  return 'Yesterday';
+  return new Date(d).toLocaleDateString('en-NZ',{timeZone:NZ_TZ,month:'short',day:'numeric',year:'numeric'});
 }
 
 // 1) Auth & init
 async function checkAuth(){
   try {
-    const res = await fetch('/api/auth',{credentials:'include'});
-    if(res.ok){
-      const { username, role, id } = await res.json();
-      userRole = role; userId = id;
+    const r = await fetch('/api/auth',{credentials:'include'});
+    if(r.ok){
+      const {username,role,id} = await r.json();
+      userRole=role; userId=id;
       userInfoDiv.textContent = `${greet()}, ${username}`;
-      // only show cog if it exists
-      if(role==='admin' && adminBtn){
-        adminBtn.style.display = 'inline-block';
-      }
+      if(role==='admin'&&adminBtn) adminBtn.style.display='inline-block';
       showChat();
       await loadChannels();
       startPolling();
       return;
     }
-  } catch(e){ console.error(e) }
+  }catch(e){console.error(e);}
   showLogin();
 }
 
 // 2) Sidebar
 async function loadChannels(){
   const chs=[]; let msgs,last;
-  msgs = await fetch(`/api/messages?channel=everyone`,{credentials:'include'}).then(r=>r.json());
-  last = msgs[msgs.length-1];
+  msgs=await fetch(`/api/messages?channel=everyone`,{credentials:'include'}).then(r=>r.json());
+  last=msgs[msgs.length-1];
   chs.push({key:'everyone',label:'Everyone',ts:last?.timestamp||0,author:last?.authorRole||null});
   if(userRole==='member'){
     const key=`private-${userId}`;
-    msgs = await fetch(`/api/messages?channel=${key}`,{credentials:'include'}).then(r=>r.json());
-    last = msgs[msgs.length-1];
+    msgs=await fetch(`/api/messages?channel=${key}`,{credentials:'include'}).then(r=>r.json());
+    last=msgs[msgs.length-1];
     chs.push({key,label:'Admin',ts:last?.timestamp||0,author:last?.authorRole||null});
   } else {
-    const users = await fetch('/api/users',{credentials:'include'}).then(r=>r.json());
+    const users=await fetch('/api/users',{credentials:'include'}).then(r=>r.json());
     for(const u of users.filter(u=>u.role==='member')){
       const key=`private-${u.id}`;
-      msgs = await fetch(`/api/messages?channel=${key}`,{credentials:'include'}).then(r=>r.json());
-      last = msgs[msgs.length-1];
+      msgs=await fetch(`/api/messages?channel=${key}`,{credentials:'include'}).then(r=>r.json());
+      last=msgs[msgs.length-1];
       chs.push({key,label:u.username,ts:last?.timestamp||0,author:last?.authorRole||null});
     }
   }
-  const [ev,...rest]=chs; rest.sort((a,b)=>b.ts-a.ts);
+  const [ev,...rt]=chs; rt.sort((a,b)=>b.ts-a.ts);
   channelList.innerHTML='';
-  [ev,...rest].forEach(ch=>{
+  [ev,...rt].forEach(ch=>{
     const li=document.createElement('li');
     li.textContent=ch.label+(userRole==='admin'&&ch.author==='member'?' *':'');
     li.dataset.channel=ch.key;
@@ -106,27 +101,26 @@ async function loadChannels(){
   });
 }
 
-// Switch
+// Switch channel
 function selectChannel(key,label){
   currentChannel=key;
   chatTitle.textContent=label;
   document.querySelectorAll('#channel-list li')
     .forEach(li=>li.classList.toggle('active',li.dataset.channel===key));
   daysToShow=0;
-  loadMessages();
-  loadFiles();
+  loadMessages(); loadFiles();
 }
 
-// 3) Poll
+// 3) Polling
 function startPolling(){
-  loadMessages();loadFiles();loadChannels();
-  pollInterval=setInterval(()=>{loadMessages();loadFiles();loadChannels();},1000);
+  loadMessages(); loadFiles(); loadChannels();
+  pollInterval=setInterval(()=>{loadMessages(); loadFiles(); loadChannels();},1000);
 }
 
 // 4) Login
 loginForm.onsubmit=async e=>{
   e.preventDefault();
-  const res=await fetch('/api/login',{
+  const r=await fetch('/api/login',{
     method:'POST',credentials:'include',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
@@ -134,80 +128,71 @@ loginForm.onsubmit=async e=>{
       password:document.getElementById('password').value
     })
   });
-  if(res.ok)await checkAuth();
+  if(r.ok)await checkAuth();
   else alert('Login failed');
 };
 
 // Logout
-logoutBtn.onclick=async()=>{
-  await fetch('/api/logout',{method:'POST',credentials:'include'});
-  clearInterval(pollInterval);
-  window.location='/';
-};
+logoutBtn.onclick=async()=>{await fetch('/api/logout',{method:'POST',credentials:'include'});clearInterval(pollInterval);window.location='/';};
 
 // Admin cog
-if(adminBtn){
-  adminBtn.onclick=()=>window.location='/admin.html';
-}
+if(adminBtn) adminBtn.onclick=()=>window.location='/admin.html';
 
-// Input
+// Input shortcuts
 messageText.addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&!e.ctrlKey){ e.preventDefault(); sendMessage(); }
-  else if(e.key==='Enter'&&e.ctrlKey){ messageText.value+='\n'; }
+  if(e.key==='Enter'&&!e.ctrlKey){e.preventDefault();sendMessage();}
+  else if(e.key==='Enter'&&e.ctrlKey){messageText.value+='\n';}
 });
 sendBtn.onclick=sendMessage;
 uploadBtn.onclick=()=>fileInput.click();
 fileInput.onchange=uploadFile;
 
-// 5) Messages: headings, hh:mm, lazy load
+// 5) Messages with headings, hh:mm, lazy-load
 async function loadMessages(){
-  const res=await fetch(`/api/messages?channel=${currentChannel}`,{credentials:'include'});
-  if(!res.ok)return;
-  const all=await res.json();
-  const cutoff=new Date(Date.now()-daysToShow*864e5);
-  const cutStr=cutoff.toLocaleDateString('en-CA',{timeZone:NZ_TZ});
-  const filtered=all.filter(m=>toDateStr(m.timestamp)>=cutStr);
+  const r=await fetch(`/api/messages?channel=${currentChannel}`,{credentials:'include'});
+  if(!r.ok) return;
+  const all=await r.json();
+  const cut=new Date(Date.now()-daysToShow*864e5);
+  const cs=cut.toLocaleDateString('en-CA',{timeZone:NZ_TZ});
+  const filtered=all.filter(m=>toDateStr(m.timestamp)>=cs);
 
-  pinnedContainer.innerHTML='';
-  messagesDiv.innerHTML='';
-  let lastDate=null;
+  pinnedContainer.innerHTML=''; messagesDiv.innerHTML='';
+  let lastD=null;
   filtered.sort((a,b)=>a.timestamp-b.timestamp).forEach(msg=>{
-    const dStr=toDateStr(msg.timestamp);
-    if(dStr!==lastDate){
-      lastDate=dStr;
-      const h=document.createElement('div');
-      h.className='date-heading';
-      h.textContent=headingText(dStr);
-      messagesDiv.appendChild(h);
-      lastDate=dStr;
+    const d=toDateStr(msg.timestamp);
+    if(d!==lastD){
+      lastD=d;
+      const hd=document.createElement('div');
+      hd.className='date-heading';
+      hd.textContent=headingText(d);
+      messagesDiv.appendChild(hd);
     }
-    const time=new Date(msg.timestamp)
-      .toLocaleTimeString('en-NZ',{timeZone:NZ_TZ,hour:'2-digit',minute:'2-digit',hour12:false});
+    const t=new Date(msg.timestamp).toLocaleTimeString('en-NZ',{timeZone:NZ_TZ,hour:'2-digit',minute:'2-digit',hour12:false});
     const div=document.createElement('div');
     div.className='message';
-    div.innerHTML=`<span class="meta">[${time}] ${msg.username}:</span> ${msg.content}`;
+    div.innerHTML=`<span class="meta">[${t}] ${msg.username}:</span> ${msg.content}`;
     if(userRole==='admin'){
-      const pin=document.createElement('button');
-      pin.className='pin-btn';
-      pin.textContent=msg.pinned?'Unpin':'Pin';
-      pin.onclick=()=>togglePin(msg.id,!msg.pinned);
-      div.appendChild(pin);
-      const del=document.createElement('button');
-      del.className='delete-btn';
-      del.textContent='Delete';
-      del.onclick=()=>deleteMessage(msg.id);
-      div.appendChild(del);
+      const p=document.createElement('button');
+      p.className='pin-btn';
+      p.textContent=msg.pinned?'Unpin':'Pin';
+      p.onclick=()=>togglePin(msg.id,!msg.pinned);
+      div.appendChild(p);
+      const d=document.createElement('button');
+      d.className='delete-btn';
+      d.textContent='Delete';
+      d.onclick=()=>deleteMessage(msg.id);
+      div.appendChild(d);
     }
     (msg.pinned?pinnedContainer:messagesDiv).appendChild(div);
+    lastD=d;
   });
 
-  // ensure full scroll
+  // always scroll bottom
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     messagesSection.scrollTop=messagesSection.scrollHeight;
   }));
 }
-
-// lazy load
+// lazy-load on scroll up
 messagesSection.addEventListener('scroll',()=>{
   if(messagesSection.scrollTop===0){
     daysToShow++;
@@ -215,9 +200,9 @@ messagesSection.addEventListener('scroll',()=>{
   }
 });
 
-// send
+// Send
 async function sendMessage(){
-  const c=messageText.value.trim(); if(!c)return;
+  const c=messageText.value.trim(); if(!c) return;
   await fetch('/api/messages',{method:'POST',credentials:'include',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({content:c,channel:currentChannel})
@@ -226,7 +211,7 @@ async function sendMessage(){
   loadMessages();
 }
 
-// pin
+// Pin/unpin
 async function togglePin(id,p){
   await fetch('/api/messages/pin',{method:'POST',credentials:'include',
     headers:{'Content-Type':'application/json'},
@@ -235,17 +220,17 @@ async function togglePin(id,p){
   loadMessages();
 }
 
-// delete
+// Delete
 async function deleteMessage(id){
   await fetch(`/api/messages?id=${id}`,{method:'DELETE',credentials:'include'});
   loadMessages();
 }
 
-// files
+// Files
 async function loadFiles(){
-  const res=await fetch(`/api/messages?channel=${currentChannel}`,{credentials:'include'});
-  if(!res.ok)return;
-  const data=await res.json();
+  const r=await fetch(`/api/messages?channel=${currentChannel}`,{credentials:'include'});
+  if(!r.ok)return;
+  const data=await r.json();
   filesList.innerHTML='';
   data.forEach(msg=>{
     const m=msg.content.match(/<a href="([^"]+)" target="_blank">([^<]+)<\/a>/);
@@ -258,16 +243,16 @@ async function loadFiles(){
       thumb=document.createElement('img');thumb.src=url;thumb.className='file-thumb';
     } else {
       thumb=document.createElement('i');
-      const map={pdf:'fa-file-pdf',doc:'fa-file-word',docx:'fa-file-word',
-                 xls:'fa-file-excel',xlsx:'fa-file-excel',
-                 ppt:'fa-file-powerpoint',pptx:'fa-file-powerpoint'};
-      thumb.className=`file-icon fas ${map[ext]||'fa-file'}`;
+      const mp={pdf:'fa-file-pdf',doc:'fa-file-word',docx:'fa-file-word',
+                xls:'fa-file-excel',xlsx:'fa-file-excel',
+                ppt:'fa-file-powerpoint',pptx:'fa-file-powerpoint'};
+      thumb.className=`file-icon fas ${mp[ext]||'fa-file'}`;
     }
     li.appendChild(thumb);
-    const span=document.createElement('span');
-    span.className='file-name';
-    span.innerHTML=`<a href="${url}" target="_blank">${fn}</a>`;
-    li.appendChild(span);
+    const sp=document.createElement('span');
+    sp.className='file-name';
+    sp.innerHTML=`<a href="${url}" target="_blank">${fn}</a>`;
+    li.appendChild(sp);
     if(userRole==='admin'){
       const b=document.createElement('button');b.className='file-delete';b.textContent='×';
       b.onclick=async()=>{
@@ -281,11 +266,11 @@ async function loadFiles(){
   });
 }
 
-// upload
+// Upload
 async function uploadFile(){
-  const f=fileInput.files[0];if(!f)return alert('No file selected');
-  const fm=new FormData();fm.append('file',f);
-  const r=await fetch('/api/upload',{method:'POST',credentials:'include',body:fm});
+  const f=fileInput.files[0]; if(!f)return alert('No file selected');
+  const fd=new FormData();fd.append('file',f);
+  const r=await fetch('/api/upload',{method:'POST',credentials:'include',body:fd});
   if(!r.ok){const e=await r.json().catch(()=>({}));return alert('Upload failed: '+(e.error||r.status));}
   const {filename,url}=await r.json();
   await fetch('/api/messages',{method:'POST',credentials:'include',
@@ -295,5 +280,5 @@ async function uploadFile(){
   fileInput.value='';loadFiles();loadMessages();
 }
 
-// kick off
+// Kick‐off
 checkAuth();

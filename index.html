@@ -7,6 +7,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CESW Hub</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans&display=swap" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    integrity="sha512-pb3R5N8j+vGv2Om+Sg6L/JWQ1CLxOrvDwOxg4bO6XsfZQnF8vtr+r1z3L07W/a/r0TcuB/9B+KXj3tDkXNTaTA=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"
+  />
   <link rel="stylesheet" href="/style.css" />
   <script defer src="/main.js"></script>
 </head>
@@ -22,20 +28,21 @@
 
   <div id="chat-container" style="display:none;">
     <aside id="sidebar">
-      <!-- Logo + Title -->
       <div id="logo">
         <img src="/logo.png" alt="CESW Hub Logo" />
         <span class="logo-text">CESW Hub</span>
       </div>
-      <!-- Greeting will be injected here -->
       <div id="user-info"></div>
       <ul id="channel-list"></ul>
+      <button id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </aside>
 
     <section id="chat-main">
       <header id="chat-header">
         <h2 id="chat-title">Everyone</h2>
-        <button id="logout-btn">Logout</button>
+        <div class="header-buttons">
+          <button id="admin-btn" style="display:none;"><i class="fas fa-cog"></i></button>
+        </div>
       </header>
 
       <div id="pinned-section">
@@ -57,7 +64,7 @@
         <textarea id="message-text" rows="2" placeholder="Type a message…"></textarea>
         <button id="send-btn">Send</button>
         <input type="file" id="file-input" style="display:none;" />
-        <button id="upload-btn" style="display:none;">Upload</button>
+        <button id="upload-btn" style="display:none;"><i class="fas fa-upload"></i></button>
       </div>
     </section>
   </div>
