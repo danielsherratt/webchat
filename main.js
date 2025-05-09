@@ -3,12 +3,12 @@
 // Always use NZST
 const NZ_TZ = 'Pacific/Auckland';
 
-// Elements
+// Element refs
 const loginContainer   = document.getElementById('login-container');
 const chatContainer    = document.getElementById('chat-container');
 const loginForm        = document.getElementById('login-form');
 const logoutBtn        = document.getElementById('logout-btn');
-const adminBtn         = document.getElementById('admin-btn');
+const adminBtn         = document.getElementById('admin-btn');          // may be null
 const userInfoDiv      = document.getElementById('user-info');
 const channelList      = document.getElementById('channel-list');
 const chatTitle        = document.getElementById('chat-title');
@@ -24,7 +24,7 @@ const uploadBtn        = document.getElementById('upload-btn');
 let userRole, userId;
 let currentChannel = 'everyone';
 let pollInterval;
-let daysToShow = 0; // 0 = today only, 1 = today+1, etc.
+let daysToShow = 0;
 
 // Helpers
 const showLogin = () => {
@@ -41,33 +41,29 @@ function greet() {
        : h < 18 ? 'Good afternoon'
        : 'Good evening';
 }
-
-// Get NZ date string (YYYY-MM-DD)
 function toDateStr(ts) {
-  return new Date(ts)
-    .toLocaleDateString('en-CA',{ timeZone: NZ_TZ });
+  return new Date(ts).toLocaleDateString('en-CA',{timeZone:NZ_TZ});
 }
-
-// Relative heading text
-function headingText(dateStr) {
-  const today   = new Date().toLocaleDateString('en-CA',{ timeZone: NZ_TZ });
-  const yesterday = new Date(Date.now() - 864e5)
-    .toLocaleDateString('en-CA',{ timeZone: NZ_TZ });
-  if (dateStr === today)     return 'Today';
-  if (dateStr === yesterday) return 'Yesterday';
-  // else format as MMM D, YYYY
-  return new Date(dateStr).toLocaleDateString('en-NZ',{ timeZone:NZ_TZ, year:'numeric', month:'short', day:'numeric' });
+function headingText(dStr) {
+  const today = new Date().toLocaleDateString('en-CA',{timeZone:NZ_TZ});
+  const yday  = new Date(Date.now()-864e5).toLocaleDateString('en-CA',{timeZone:NZ_TZ});
+  if (dStr===today) return 'Today';
+  if (dStr===yday)  return 'Yesterday';
+  return new Date(dStr).toLocaleDateString('en-NZ',{timeZone:NZ_TZ,month:'short',day:'numeric',year:'numeric'});
 }
 
 // 1) Auth & init
-async function checkAuth() {
+async function checkAuth(){
   try {
-    const res = await fetch('/api/auth',{ credentials:'include' });
-    if (res.ok) {
+    const res = await fetch('/api/auth',{credentials:'include'});
+    if(res.ok){
       const { username, role, id } = await res.json();
       userRole = role; userId = id;
       userInfoDiv.textContent = `${greet()}, ${username}`;
-      if (role==='admin') adminBtn.style.display = 'inline-block';
+      // only show cog if it exists
+      if(role==='admin' && adminBtn){
+        adminBtn.style.display = 'inline-block';
+      }
       showChat();
       await loadChannels();
       startPolling();
@@ -78,12 +74,12 @@ async function checkAuth() {
 }
 
 // 2) Sidebar
-async function loadChannels() {
-  const chs = [];
-  let msgs = await fetch(`/api/messages?channel=everyone`,{credentials:'include'}).then(r=>r.json());
-  let last = msgs[msgs.length-1];
+async function loadChannels(){
+  const chs=[]; let msgs,last;
+  msgs = await fetch(`/api/messages?channel=everyone`,{credentials:'include'}).then(r=>r.json());
+  last = msgs[msgs.length-1];
   chs.push({key:'everyone',label:'Everyone',ts:last?.timestamp||0,author:last?.authorRole||null});
-  if (userRole==='member') {
+  if(userRole==='member'){
     const key=`private-${userId}`;
     msgs = await fetch(`/api/messages?channel=${key}`,{credentials:'include'}).then(r=>r.json());
     last = msgs[msgs.length-1];
@@ -110,7 +106,7 @@ async function loadChannels() {
   });
 }
 
-// Switch channel
+// Switch
 function selectChannel(key,label){
   currentChannel=key;
   chatTitle.textContent=label;
@@ -123,10 +119,8 @@ function selectChannel(key,label){
 
 // 3) Poll
 function startPolling(){
-  loadMessages(); loadFiles(); loadChannels();
-  pollInterval=setInterval(()=>{
-    loadMessages(); loadFiles(); loadChannels();
-  },1000);
+  loadMessages();loadFiles();loadChannels();
+  pollInterval=setInterval(()=>{loadMessages();loadFiles();loadChannels();},1000);
 }
 
 // 4) Login
@@ -140,7 +134,7 @@ loginForm.onsubmit=async e=>{
       password:document.getElementById('password').value
     })
   });
-  if(res.ok) await checkAuth();
+  if(res.ok)await checkAuth();
   else alert('Login failed');
 };
 
@@ -151,10 +145,12 @@ logoutBtn.onclick=async()=>{
   window.location='/';
 };
 
-// Admin button
-adminBtn.onclick = ()=> window.location = '/admin.html';
+// Admin cog
+if(adminBtn){
+  adminBtn.onclick=()=>window.location='/admin.html';
+}
 
-// Message input
+// Input
 messageText.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&!e.ctrlKey){ e.preventDefault(); sendMessage(); }
   else if(e.key==='Enter'&&e.ctrlKey){ messageText.value+='\n'; }
@@ -163,21 +159,15 @@ sendBtn.onclick=sendMessage;
 uploadBtn.onclick=()=>fileInput.click();
 fileInput.onchange=uploadFile;
 
-// 5) Load messages, group & lazy‐load
+// 5) Messages: headings, hh:mm, lazy load
 async function loadMessages(){
   const res=await fetch(`/api/messages?channel=${currentChannel}`,{credentials:'include'});
   if(!res.ok)return;
   const all=await res.json();
+  const cutoff=new Date(Date.now()-daysToShow*864e5);
+  const cutStr=cutoff.toLocaleDateString('en-CA',{timeZone:NZ_TZ});
+  const filtered=all.filter(m=>toDateStr(m.timestamp)>=cutStr);
 
-  // filter by daysToShow
-  const cutoff=new Date(Date.now() - daysToShow*864e5);
-  const cutoffStr=cutoff.toLocaleDateString('en-CA',{timeZone:NZ_TZ});
-  const filtered=all.filter(m=>{
-    const dStr=toDateStr(m.timestamp);
-    return dStr >= cutoffStr;
-  });
-
-  // group & render
   pinnedContainer.innerHTML='';
   messagesDiv.innerHTML='';
   let lastDate=null;
@@ -189,12 +179,13 @@ async function loadMessages(){
       h.className='date-heading';
       h.textContent=headingText(dStr);
       messagesDiv.appendChild(h);
+      lastDate=dStr;
     }
-    const timeOnly=new Date(msg.timestamp)
+    const time=new Date(msg.timestamp)
       .toLocaleTimeString('en-NZ',{timeZone:NZ_TZ,hour:'2-digit',minute:'2-digit',hour12:false});
     const div=document.createElement('div');
     div.className='message';
-    div.innerHTML=`<span class="meta">[${timeOnly}] ${msg.username}:</span> ${msg.content}`;
+    div.innerHTML=`<span class="meta">[${time}] ${msg.username}:</span> ${msg.content}`;
     if(userRole==='admin'){
       const pin=document.createElement('button');
       pin.className='pin-btn';
@@ -210,15 +201,13 @@ async function loadMessages(){
     (msg.pinned?pinnedContainer:messagesDiv).appendChild(div);
   });
 
-  // always scroll bottom
-  requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      messagesSection.scrollTop = messagesSection.scrollHeight;
-    });
-  });
+  // ensure full scroll
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    messagesSection.scrollTop=messagesSection.scrollHeight;
+  }));
 }
 
-// Lazy load on scroll up
+// lazy load
 messagesSection.addEventListener('scroll',()=>{
   if(messagesSection.scrollTop===0){
     daysToShow++;
@@ -226,12 +215,10 @@ messagesSection.addEventListener('scroll',()=>{
   }
 });
 
-// Send
+// send
 async function sendMessage(){
-  const c=messageText.value.trim();
-  if(!c)return;
-  await fetch('/api/messages',{
-    method:'POST',credentials:'include',
+  const c=messageText.value.trim(); if(!c)return;
+  await fetch('/api/messages',{method:'POST',credentials:'include',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({content:c,channel:currentChannel})
   });
@@ -239,23 +226,22 @@ async function sendMessage(){
   loadMessages();
 }
 
-// Pin/unpin
+// pin
 async function togglePin(id,p){
-  await fetch('/api/messages/pin',{
-    method:'POST',credentials:'include',
+  await fetch('/api/messages/pin',{method:'POST',credentials:'include',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({id,pinned:p})
   });
   loadMessages();
 }
 
-// Delete
+// delete
 async function deleteMessage(id){
   await fetch(`/api/messages?id=${id}`,{method:'DELETE',credentials:'include'});
   loadMessages();
 }
 
-// Files (unchanged)
+// files
 async function loadFiles(){
   const res=await fetch(`/api/messages?channel=${currentChannel}`,{credentials:'include'});
   if(!res.ok)return;
@@ -265,13 +251,11 @@ async function loadFiles(){
     const m=msg.content.match(/<a href="([^"]+)" target="_blank">([^<]+)<\/a>/);
     if(!m)return;
     const [,url,fn]=m;
-    const key=decodeURIComponent(url.split('/').pop());
-    const ext=fn.split('.').pop().toLowerCase();
     const li=document.createElement('li');li.className='file-item';
     let thumb;
+    const ext=fn.split('.').pop().toLowerCase();
     if(['png','jpg','jpeg','gif','webp'].includes(ext)){
-      thumb=document.createElement('img');
-      thumb.src=url;thumb.className='file-thumb';
+      thumb=document.createElement('img');thumb.src=url;thumb.className='file-thumb';
     } else {
       thumb=document.createElement('i');
       const map={pdf:'fa-file-pdf',doc:'fa-file-word',docx:'fa-file-word',
@@ -285,13 +269,10 @@ async function loadFiles(){
     span.innerHTML=`<a href="${url}" target="_blank">${fn}</a>`;
     li.appendChild(span);
     if(userRole==='admin'){
-      const b=document.createElement('button');
-      b.className='file-delete';b.textContent='×';
+      const b=document.createElement('button');b.className='file-delete';b.textContent='×';
       b.onclick=async()=>{
         if(!confirm(`Delete ${fn}?`))return;
-        await fetch(`/api/upload?key=${encodeURIComponent(key)}`,{
-          method:'DELETE',credentials:'include'
-        });
+        await fetch(`/api/upload?key=${encodeURIComponent(url.split('/').pop())}`,{method:'DELETE',credentials:'include'});
         loadFiles();
       };
       li.appendChild(b);
@@ -300,10 +281,9 @@ async function loadFiles(){
   });
 }
 
-// Upload
+// upload
 async function uploadFile(){
-  const f=fileInput.files[0];
-  if(!f)return alert('No file selected');
+  const f=fileInput.files[0];if(!f)return alert('No file selected');
   const fm=new FormData();fm.append('file',f);
   const r=await fetch('/api/upload',{method:'POST',credentials:'include',body:fm});
   if(!r.ok){const e=await r.json().catch(()=>({}));return alert('Upload failed: '+(e.error||r.status));}
@@ -315,5 +295,5 @@ async function uploadFile(){
   fileInput.value='';loadFiles();loadMessages();
 }
 
-// Kickoff
+// kick off
 checkAuth();
